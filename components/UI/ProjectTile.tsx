@@ -15,7 +15,7 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project }) => {
                 className="w-full bg-white shadow-sm transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] group-hover:scale-[1.02] group-hover:-translate-y-1 group-hover:shadow-xl group-hover:border-moss/30 border border-transparent"
             >
                 {/* Image Container - No Radius */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden">
+                <div className="relative aspect-[3/2] w-full overflow-hidden">
                     <OptimizedImage
                         src={project.imageUrl}
                         alt={project.title}
@@ -27,12 +27,12 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project }) => {
                 </div>
 
                 {/* Content */}
-                <div className="p-6 md:p-8 flex flex-col items-start gap-4">
+                <div className="p-5 md:p-6 flex flex-col items-start gap-4">
                     <div>
                         <span className="text-xs font-mono text-charcoal/50 uppercase tracking-widest mb-2 block">
                             {project.category}
                         </span>
-                        <h3 className="text-2xl md:text-3xl font-serif text-charcoal">
+                        <h3 className="text-xl md:text-2xl font-serif text-charcoal">
                             {project.title}
                         </h3>
                     </div>

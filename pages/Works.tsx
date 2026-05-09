@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PROJECTS } from '../constants';
 import ProjectTile from '../components/UI/ProjectTile';
 import ArchivedProjectItem from '../components/UI/ArchivedProjectItem';
@@ -8,8 +8,8 @@ const Works: React.FC = () => {
   // For demonstration, we'll use all projects as "Selected" 
   // and a subset as "Archived" to populate both sections.
   // In a real app, you'd likely have a property like 'isArchived' on the project type.
-  const selectedProjects = PROJECTS;
-  const archivedProjects = PROJECTS.slice(0, 3); // Just grabbing some to show the list
+  const selectedProjects = PROJECTS.slice(0, 2);
+  const archivedProjects = PROJECTS.slice(2);
 
   return (
     <motion.div
@@ -21,14 +21,14 @@ const Works: React.FC = () => {
       <div className="max-w-7xl mx-auto">
 
         {/* SECTION 1: SELECTED WORKS */}
-        <section className="mb-48">
+        <section className="mb-24">
           <header className="mb-24">
             <h1 className="font-serif text-5xl md:text-7xl text-charcoal mb-4">
               Selected Works
             </h1>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
             {selectedProjects.map((project, index) => (
               <motion.div
                 key={`selected-${project.id}`}
@@ -46,27 +46,32 @@ const Works: React.FC = () => {
 
         {/* SECTION 2: ARCHIVED PROJECTS */}
         <section>
-          <header className="mb-6 border-b border-charcoal/10 pb-4">
-            <h2 className="font-serif text-3xl text-charcoal/40">
+          <header className="mb-24">
+            <h2 className="font-serif text-5xl md:text-7xl text-charcoal mb-4">
               Archived Projects
             </h2>
-            <p className="text-charcoal/40 text-sm mt-1">
-              Unfinished/Undeveloped projects
+            <p className="text-charcoal/70 text-lg mt-1">
+              These are ideas that I had for a product or feature, but upon further exploration, I found that I wouldn't vouch for them for one reason or another.
+              <br />
+              This reason could be design related, business related, ecosystem fit related, etc.
             </p>
           </header>
 
           <div className="flex flex-col">
-            {archivedProjects.map((project, index) => (
-              <motion.div
-                key={`archived-${project.id}`}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05, duration: 0.5 }}
-              >
-                <ArchivedProjectItem project={project} />
-              </motion.div>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {archivedProjects.map((project, index) => (
+                <motion.div
+                  layout
+                  key={`archived-${project.id}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.05, duration: 0.5 }}
+                >
+                  <ArchivedProjectItem project={project} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </section>
 
