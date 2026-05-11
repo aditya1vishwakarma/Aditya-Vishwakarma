@@ -6,6 +6,7 @@ import { motion as motionComponent, AnimatePresence, useSpring, useTransform } f
 import * as ReactRouterDOM from 'react-router-dom';
 import { MOOD_BOARD } from '../constants';
 import type { MoodBoardItem } from '../types';
+import MoodBoardCard from '../components/UI/MoodBoardCard';
 
 const { Link } = ReactRouterDOM as any;
 const motion = motionComponent as any;
@@ -79,7 +80,7 @@ function usePreloadTextures(items: MoodBoardItem[]) {
         // Fetch as blob so we bypass the browser image cache entirely.
         // This guarantees we always get a fresh CORS response, not a stale
         // cached entry that lacks Access-Control headers.
-        fetch(item.imageUrl, { mode: 'cors' })
+        fetch(item.imageUrl, { mode: 'cors', cache: 'reload' })
           .then((res) => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return res.blob();
@@ -104,6 +105,7 @@ function usePreloadTextures(items: MoodBoardItem[]) {
             // fetch failed (network / CORS) — fall back to direct img load
             if (cancelled) return onDone();
             const img = new Image();
+            img.crossOrigin = 'anonymous'; // MUST HAVE THIS FOR WEBGL
             img.onload = () => {
               if (cancelled) return;
               map.set(item.imageUrl, makeTexture(img, false));
@@ -326,6 +328,7 @@ const MoodBoardV2Page: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MoodBoardItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<MoodBoardItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [viewMode, setViewMode] = useState<'circle' | 'grid'>('grid');
 
   // Smooth the progress for the loading bar
   const animatedProgress = useSpring(progress, { stiffness: 50, damping: 20 });
@@ -390,23 +393,48 @@ const MoodBoardV2Page: React.FC = () => {
       </AnimatePresence>
 
       {/* ──── TOP BAR ──── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 pointer-events-none">
-        <div className="flex items-center gap-3 pointer-events-auto">
-          {/* Turtle (slow) */}
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-charcoal/30 flex-shrink-0"><path d="m12 10 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a8 8 0 1 0-16 0v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3l2-4h4Z" /><path d="M4.82 7.9 8 10" /><path d="M15.18 7.9 12 10" /><path d="M16.93 10H20a2 2 0 0 1 0 4H2" /></svg>
+      <div className="fixed top-0 left-0 right-0 z-50 flex flex-col md:flex-row items-start md:items-center justify-between px-8 py-6 pointer-events-none gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pointer-events-auto">
 
-          <input
-            type="range"
-            min="0"
-            max="0.64"
-            step="0.01"
-            value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
-            className="mood-slider w-28 h-[2px] appearance-none bg-charcoal/15 rounded-full outline-none cursor-pointer"
-          />
+          {/* View Toggle */}
+          <div className="flex items-center bg-charcoal/5 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
+            <button
+              onClick={() => setViewMode('circle')}
+              className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'circle'
+                  ? 'bg-white text-charcoal shadow-sm'
+                  : 'text-charcoal/40 hover:text-charcoal/70'
+                }`}
+            >
+              Ring
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'grid'
+                  ? 'bg-white text-charcoal shadow-sm'
+                  : 'text-charcoal/40 hover:text-charcoal/70'
+                }`}
+            >
+              Grid
+            </button>
+          </div>
 
-          {/* Rabbit (fast) */}
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-charcoal/30 flex-shrink-0"><path d="M13 16a3 3 0 0 1 2.24 5" /><path d="M18 12h.01" /><path d="M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3" /><path d="M20 8.54V4a2 2 0 1 0-4 0v3" /><path d="M7.612 12.524a3 3 0 1 0-1.6 4.3" /></svg>
+          <div className={`flex items-center gap-3 transition-opacity duration-300 ${viewMode === 'grid' ? 'opacity-0 pointer-events-none hidden md:flex' : 'opacity-100 pointer-events-auto flex'}`}>
+            {/* Turtle (slow) */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-charcoal/30 flex-shrink-0"><path d="m12 10 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a8 8 0 1 0-16 0v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3l2-4h4Z" /><path d="M4.82 7.9 8 10" /><path d="M15.18 7.9 12 10" /><path d="M16.93 10H20a2 2 0 0 1 0 4H2" /></svg>
+
+            <input
+              type="range"
+              min="0"
+              max="0.64"
+              step="0.01"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="mood-slider w-28 h-[2px] appearance-none bg-charcoal/15 rounded-full outline-none cursor-pointer"
+            />
+
+            {/* Rabbit (fast) */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-charcoal/30 flex-shrink-0"><path d="M13 16a3 3 0 0 1 2.24 5" /><path d="M18 12h.01" /><path d="M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3" /><path d="M20 8.54V4a2 2 0 1 0-4 0v3" /><path d="M7.612 12.524a3 3 0 1 0-1.6 4.3" /></svg>
+          </div>
         </div>
 
         <Link
@@ -417,34 +445,48 @@ const MoodBoardV2Page: React.FC = () => {
         </Link>
       </div>
 
-      {/* ──── CANVAS ──── */}
-      <Canvas
-        orthographic
-        camera={{ position: [0, 50, 0], zoom: 1, near: 0.1, far: 200 }}
-        style={{ width: '100%', height: '100%' }}
-        onPointerMissed={() => setSelectedItem(null)}
-      >
-        <color attach="background" args={['#FBFCF6']} />
-        <TopDownCamera />
+      {/* ──── MAIN VIEW ──── */}
+      {viewMode === 'circle' && (
+        <Canvas
+          orthographic
+          camera={{ position: [0, 50, 0], zoom: 1, near: 0.1, far: 200 }}
+          style={{ width: '100%', height: '100%' }}
+          onPointerMissed={() => setSelectedItem(null)}
+        >
+          <color attach="background" args={['#FBFCF6']} />
+          <TopDownCamera />
 
-        {/* Lighting */}
-        <ambientLight intensity={0.7} color="#FFFFFF" />
-        <directionalLight position={[10, 50, 8]} intensity={2.0} color="#FFFFF0" />
-        <directionalLight position={[-6, 40, -10]} intensity={0.5} color="#F0F0FF" />
+          {/* Lighting */}
+          <ambientLight intensity={0.7} color="#FFFFFF" />
+          <directionalLight position={[10, 50, 8]} intensity={2.0} color="#FFFFF0" />
+          <directionalLight position={[-6, 40, -10]} intensity={0.5} color="#F0F0FF" />
 
-        <RotatingRing
-          speed={speed}
-          selectedId={selectedItem?.id ?? null}
-          onSelectItem={handleSelectItem}
-          textures={textures}
-        />
+          <RotatingRing
+            speed={speed}
+            selectedId={selectedItem?.id ?? null}
+            onSelectItem={handleSelectItem}
+            textures={textures}
+          />
 
-        <ContinuousRaycast onHover={handleHover} />
-      </Canvas>
+          <ContinuousRaycast onHover={handleHover} />
+        </Canvas>
+      )}
+
+      {viewMode === 'grid' && (
+        <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[140px] pb-24 px-6 md:px-12 pointer-events-auto">
+          <div className="max-w-[1600px] mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
+            {MOOD_BOARD.map((item) => (
+              <div key={item.id} className="break-inside-avoid mb-6">
+                <MoodBoardCard item={item} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ──── HOVER POPOVER ──── */}
       <AnimatePresence>
-        {hoveredItem && !selectedItem && (
+        {hoveredItem && !selectedItem && viewMode === 'circle' && (
           <motion.div
             key={`hover-${hoveredItem.id}`}
             initial={{ opacity: 0, scale: 0.92 }}
@@ -477,7 +519,7 @@ const MoodBoardV2Page: React.FC = () => {
 
       {/* ──── CLICK-OUTSIDE OVERLAY ──── */}
       <AnimatePresence>
-        {selectedItem && (
+        {selectedItem && viewMode === 'circle' && (
           <motion.div
             key="dismiss-overlay"
             initial={{ opacity: 0 }}
@@ -492,91 +534,23 @@ const MoodBoardV2Page: React.FC = () => {
 
       {/* ──── DETAIL PANEL (bottom-left) ──── */}
       <AnimatePresence>
-        {selectedItem && (() => {
-          return (
-            <motion.div
-              key="detail-panel"
-              initial={{ y: '50%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '10%', opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 340, damping: 38 }}
-              className="fixed bottom-6 left-6 z-40 w-[90vw] md:w-[420px]"
-              style={{
-                borderRadius: '28px',
-                padding: '12px',
-                background: 'rgba(251, 250, 248, 0.60)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                boxShadow: '0 8px 16px -4px rgba(0,0,0,0.05), 0 16px 24px -4px rgba(0,0,0,0.05), 0 24px 32px -4px rgba(0,0,0,0.05)'
-              }}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            >
-              <div className="flex flex-col">
-                <div className="flex-shrink-0">
-                  <div
-                    className="w-full overflow-hidden"
-                    style={{ borderRadius: '16px' }}
-                  >
-                    <img
-                      src={selectedItem.imageUrl}
-                      alt={selectedItem.title}
-                      className="w-full h-auto max-h-[70vh] object-contain block"
-                    />
-                  </div>
-                </div>
-
-                <div
-                  className="flex flex-col gap-[5px] flex-shrink-0"
-                  style={{
-                    paddingTop: '14px',
-                    paddingBottom: '10px',
-                    paddingLeft: '14px',
-                    paddingRight: '14px',
-                    background: 'transparent',
-                  }}
-                >
-                  <h2 className="font-serif font-semibold text-[22px] md:text-[24px] text-charcoal leading-tight tracking-tight">
-                    {selectedItem.title}
-                  </h2>
-
-                  {/* 
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedItem.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[8px] uppercase tracking-[0.2em] text-[#3F6D0D] font-bold border border-[#3F6D0D]/15 px-2.5 py-1 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  */}
-
-                  <p className="text-[#847D72] text-[15px] leading-snug font-sans">
-                    {selectedItem.description}
-                  </p>
-
-                  {selectedItem.link && (
-                    <a
-                      href={selectedItem.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between group text-[10px] uppercase tracking-widest text-charcoal/40 hover:text-[#3F6D0D] transition-colors pt-3 border-t border-charcoal/8"
-                    >
-                      <span>Visit Source</span>
-                      <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })()}
+        {selectedItem && viewMode === 'circle' && (
+          <motion.div
+            key="detail-panel"
+            initial={{ y: '50%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '10%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 38 }}
+            className="fixed bottom-6 left-6 z-40 w-[90vw] md:w-[420px]"
+          >
+            <MoodBoardCard item={selectedItem} isPopup={true} />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Bottom hint */}
       <AnimatePresence>
-        {!selectedItem && isReady && (
+        {!selectedItem && isReady && viewMode === 'circle' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

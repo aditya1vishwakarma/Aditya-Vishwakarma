@@ -4,36 +4,36 @@ import { Project, BlogPost, MoodBoardItem } from './types';
 export const PROJECTS: Project[] = [
   {
     id: '1',
-    title: 'Alpine Retreat',
-    category: 'Architecture',
-    description: 'A sustainable dwelling nestled in the Swiss Alps.',
+    title: 'Apple Music - Spatial Album Art',
+    category: 'Exploration',
+    description: 'An exploration of what Apple Music could look like with spatial album art effects.',
     fullDescription: 'The Alpine Retreat project focuses on minimal environmental impact while maximizing comfort. Using locally sourced timber and stone, the structure blends seamlessly into the mountainside.',
     imageUrl: 'https://images.unsplash.com/photo-1518128958364-65859d70aa41?q=80&w=1200',
-    date: 'Oct 2023',
-    role: 'Lead Architect',
+    date: 'May 2026',
+    role: 'Product Manager',
     path: '/works/alpine-retreat'
   },
   {
     id: '2',
-    title: 'Botanical Brand',
-    category: 'Branding',
-    description: 'Identity design for an organic skincare line.',
+    title: 'Keep this Vibe - DJ X',
+    category: 'Exploration',
+    description: 'Idea to Prototype to PRD for a feature that helps DJ X keep the vibe going for long listening sessions sessions.',
     fullDescription: 'We crafted a visual identity for "Botanical" that whispers rather than shouts. The typography is elegant and understated, paired with a color palette derived from dried herbs.',
     imageUrl: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=1200',
-    date: 'Aug 2023',
-    role: 'Art Director',
+    date: 'April 2026',
+    role: 'Product Manager',
     path: '/works/botanical-brand'
   },
   {
     id: '3',
-    title: 'Silent Spaces',
-    category: 'Photography',
-    description: 'A visual exploration of emptiness and light.',
-    fullDescription: 'Silent Spaces is a photography series capturing abandoned interiors reclaimed by nature.',
-    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200',
-    date: 'May 2023',
-    role: 'Photographer',
-    path: '/works/silent-spaces'
+    title: 'Un-Selected Works',
+    category: 'Archive',
+    description: 'A collection of ideas that I couldn\'t vouch for, but are still worth sharing.',
+    fullDescription: 'These are ideas that I had for a product or feature, but upon further exploration, I found that I couldn\'t vouch for them for one reason or another.',
+    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200', // Placeholder image, feel free to change
+    date: 'Various',
+    role: 'Explorer',
+    path: '/works#unselected-works'
   },
   {
     id: '4',
@@ -177,7 +177,7 @@ export const MOOD_BOARD: MoodBoardItem[] = [
 ];
 
 export const SOCIAL_LINKS = {
-  instagram: 'https://www.instagram.com/adityasphotoss/',
+  instagram: 'https://www.instagram.com/aditya.pictures/',
   twitter: 'https://x.com/adityav__',
   linkedin: 'https://www.linkedin.com/in/adityavishwakarma1/',
   email: 'mailto:aditya1vishwakarma@gmail.com'

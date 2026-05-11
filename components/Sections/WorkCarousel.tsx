@@ -30,7 +30,8 @@ const WorkCarousel: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        setActiveIndex((prev) => Math.min(prev + 1, PROJECTS.length - 1));
+        // setActiveIndex((prev) => Math.min(prev + 1, PROJECTS.length - 1));
+        setActiveIndex((prev) => Math.min(prev + 1, 2)); // 3 cards max
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setActiveIndex((prev) => Math.max(prev - 1, 0));
       }
@@ -73,7 +74,9 @@ const WorkCarousel: React.FC = () => {
       {/* Carousel Container */}
       <div className="relative w-full max-w-7xl mx-auto px-6 h-[650px]">
         <div className="relative w-full h-full">
-          {PROJECTS.map((project, index) => {
+          {/* {PROJECTS.map((project, index) => { */}
+          {PROJECTS.slice(0, 3).map((project, index) => {
+            const currentProjects = PROJECTS.slice(0, 3);
             const isActive = index === activeIndex;
             const isBehindActive = index > activeIndex;
             const isBeforeActive = index < activeIndex;
@@ -81,7 +84,7 @@ const WorkCarousel: React.FC = () => {
             // Z-Index Logic
             let zIndex = 10;
             if (isActive) zIndex = 50;
-            else if (isBehindActive) zIndex = PROJECTS.length - index;
+            else if (isBehindActive) zIndex = currentProjects.length - index;
             else if (isBeforeActive) zIndex = index;
 
             return (
@@ -98,7 +101,7 @@ const WorkCarousel: React.FC = () => {
                 isHovered={hoveredSpineIndex === index}
                 onHoverStart={() => setHoveredSpineIndex(index)}
                 onHoverEnd={() => setHoveredSpineIndex(null)}
-                totalCards={PROJECTS.length}
+                totalCards={currentProjects.length} // formerly PROJECTS.length
                 onClick={() => goToCard(index)}
               />
             );

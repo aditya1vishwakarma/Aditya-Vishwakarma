@@ -19,19 +19,19 @@ const Footer: React.FC = () => {
         <div className="md:col-span-4 md:col-start-9 flex flex-col gap-6">
           <h3 className="uppercase tracking-widest text-xs font-semibold text-charcoal/40">Connect</h3>
           <div className="flex flex-col gap-4">
-            <a href={SOCIAL_LINKS.instagram} className="flex items-center gap-3 hover:text-moss transition-colors group">
+            <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-moss transition-colors group">
               <Instagram size={20} className="text-charcoal group-hover:text-moss transition-colors" />
               <span>Instagram</span>
             </a>
-            <a href={SOCIAL_LINKS.twitter} className="flex items-center gap-3 hover:text-moss transition-colors group">
+            <a href={SOCIAL_LINKS.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-moss transition-colors group">
               <Twitter size={20} className="text-charcoal group-hover:text-moss transition-colors" />
               <span>Twitter</span>
             </a>
-            <a href={SOCIAL_LINKS.linkedin} className="flex items-center gap-3 hover:text-moss transition-colors group">
+            <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-moss transition-colors group">
               <Linkedin size={20} className="text-charcoal group-hover:text-moss transition-colors" />
               <span>LinkedIn</span>
             </a>
-            <a href={SOCIAL_LINKS.email} className="flex items-center gap-3 hover:text-moss transition-colors group">
+            <a href={SOCIAL_LINKS.email} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-moss transition-colors group">
               <Mail size={20} className="text-charcoal group-hover:text-moss transition-colors" />
               <span>Email Me</span>
             </a>

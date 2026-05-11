@@ -9,7 +9,7 @@ const Works: React.FC = () => {
   // and a subset as "Archived" to populate both sections.
   // In a real app, you'd likely have a property like 'isArchived' on the project type.
   const selectedProjects = PROJECTS.slice(0, 2);
-  const archivedProjects = PROJECTS.slice(2);
+  const archivedProjects = PROJECTS.slice(3); // Skip the first 3 (2 selected + 1 carousel link card)
 
   return (
     <motion.div
@@ -21,14 +21,14 @@ const Works: React.FC = () => {
       <div className="max-w-7xl mx-auto">
 
         {/* SECTION 1: SELECTED WORKS */}
-        <section className="mb-24">
-          <header className="mb-24">
+        <section className="mb-20">
+          <header className="mb-10">
             <h1 className="font-serif text-5xl md:text-7xl text-charcoal mb-4">
               Selected Works
             </h1>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
             {selectedProjects.map((project, index) => (
               <motion.div
                 key={`selected-${project.id}`}
@@ -45,15 +45,15 @@ const Works: React.FC = () => {
 
 
         {/* SECTION 2: ARCHIVED PROJECTS */}
-        <section>
-          <header className="mb-24">
+        <section id="unselected-works">
+          <header className="mb-10">
             <h2 className="font-serif text-5xl md:text-7xl text-charcoal mb-4">
-              Archived Projects
+              Un-Selected Works
             </h2>
             <p className="text-charcoal/70 text-lg mt-1">
-              These are ideas that I had for a product or feature, but upon further exploration, I found that I wouldn't vouch for them for one reason or another.
+              These are ideas that I had for a product or feature, but upon further exploration, I found that I couldn't vouch for them for one reason or another.
               <br />
-              This reason could be design related, business related, ecosystem fit related, etc.
+              This reason could be design related, business related, ecosystem fit related, etc. "Focus is about saying no"
             </p>
           </header>
 
