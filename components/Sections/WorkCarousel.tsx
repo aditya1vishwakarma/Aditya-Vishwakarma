@@ -17,6 +17,7 @@ const WorkCarousel: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [hoveredSpineIndex, setHoveredSpineIndex] = useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Responsive check
   useEffect(() => {
@@ -43,6 +44,27 @@ const WorkCarousel: React.FC = () => {
   const goToCard = useCallback((index: number) => {
     setActiveIndex(index);
   }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile || touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const distance = touchStartX - touchEndX;
+
+    // Swipe left (next)
+    if (distance > 50) {
+      setActiveIndex((prev) => Math.min(prev + 1, Math.min(2, PROJECTS.length - 1))); 
+    } 
+    // Swipe right (prev)
+    else if (distance < -50) {
+      setActiveIndex((prev) => Math.max(prev - 1, 0));
+    }
+    setTouchStartX(null);
+  };
 
   const baseOffset = isMobile ? MOBILE_SPINE_OFFSET : SPINE_OFFSET;
 
@@ -73,7 +95,11 @@ const WorkCarousel: React.FC = () => {
 
       {/* Carousel Container */}
       <div className="relative w-full max-w-7xl mx-auto px-6 h-[650px]">
-        <div className="relative w-full h-full">
+        <div 
+          className="relative w-full h-full"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* {PROJECTS.map((project, index) => { */}
           {PROJECTS.slice(0, 3).map((project, index) => {
             const currentProjects = PROJECTS.slice(0, 3);
@@ -163,25 +189,20 @@ const Card: React.FC<CardProps> = ({
   // Spine-level hover: only THIS spine fans out
   const spineWidth = isHovered && !isActive ? baseOffset + FAN_OUT_EXTRA : baseOffset;
 
-  // On mobile, all "before" cards stack at 0px, and all "behind/after" cards stack at 1*baseOffset from the right.
-  const beforePos = isMobile ? 0 : index * baseOffset;
-  const afterOffset = isMobile ? baseOffset : (totalCards - index) * baseOffset;
-
-  // Active card limits its width based on how many neighbors exist
-  // On desktop: it accounts for ALL cards before and after it.
-  // On mobile: it accounts for max 1 card before and max 1 card after.
-  const stableLeftSpace = isMobile ? Math.min(1, activeIndex) * baseOffset : activeIndex * baseOffset;
-  const stableRightSpace = isMobile ? Math.min(1, totalCards - activeIndex - 1) * baseOffset : (totalCards - activeIndex - 1) * baseOffset;
+  // On desktop: accounts for ALL cards before and after it.
+  // On mobile: offsets are 0 so everything stacks and expands to 100% width
+  const stableLeftSpace = isMobile ? 0 : activeIndex * baseOffset;
+  const stableRightSpace = isMobile ? 0 : (totalCards - activeIndex - 1) * baseOffset;
 
   // Background card positions
   const dynamicBehindLeftPosition = isBehindActive
-    ? `calc(100% - ${afterOffset}px)`
+    ? (isMobile ? '0px' : `calc(100% - ${(totalCards - index) * baseOffset}px)`)
     : 'auto';
 
   // Left spines: shift left on hover so they fan OUTWARD
   const leftSpineHoverShift = isBeforeActive && isHovered ? FAN_OUT_EXTRA : 0;
   const dynamicBeforeLeftPosition = isBeforeActive
-    ? `${beforePos - leftSpineHoverShift}px`
+    ? (isMobile ? '0px' : `${index * baseOffset - leftSpineHoverShift}px`)
     : 'auto';
 
   // Atmospheric perspective (NO scale change)
@@ -211,7 +232,7 @@ const Card: React.FC<CardProps> = ({
           : (isBeforeActive ? dynamicBeforeLeftPosition : dynamicBehindLeftPosition),
         width: isActive
           ? `calc(100% - ${stableLeftSpace + stableRightSpace}px)`
-          : `${spineWidth}px`,
+          : (isMobile ? '100%' : `${spineWidth}px`),
         zIndex: zIndex,
         cursor: !isActive ? 'pointer' : 'default',
       }}
@@ -287,7 +308,7 @@ const Card: React.FC<CardProps> = ({
 
       {/* Spine Content - Fades out immediately */}
       <AnimatePresence mode="wait">
-        {!isActive && (
+        {!isActive && !isMobile && (
           <motion.div
             key="spine-content"
             initial={{ opacity: 0 }}
