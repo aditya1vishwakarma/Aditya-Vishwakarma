@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion as motionComponent, AnimatePresence, useMotionValue, useSpring, useTransform, useAnimationFrame, useMotionTemplate } from 'framer-motion';
+import { motion as motionComponent, AnimatePresence, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion';
 import { Camera, ArrowLeft, ChevronDown } from 'lucide-react';
 
 // Fix: Cast motion to any to resolve property existence type errors for SVG and HTML motion elements
@@ -15,7 +15,6 @@ const Hero: React.FC = () => {
   // const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
   // const mobileTapCount = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isInView, setIsInView] = useState(true);
 
   // 1. MOTION VALUES
   // Initialize cursor window relative to viewport size (85% width, 25% height)
@@ -42,9 +41,56 @@ const Hero: React.FC = () => {
   // 3. DYNAMIC PARAMETERS
   const mainRadius = useTransform(velocity, [0, 2000], [100, 130]);
 
-  const maskImage = useMotionTemplate`radial-gradient(circle ${mainRadius}px at ${smoothX}px ${smoothY}px, transparent 0%, transparent 100%, black 100%), 
-  radial-gradient(circle 80px at ${trailX}px ${trailY}px, transparent 0%, transparent 100%, black 100%), 
-  radial-gradient(circle 60px at ${slowX}px ${slowY}px, transparent 0%, transparent 100%, black 100%)`;
+  // Refs for direct DOM mask updates (bypasses framer-motion style application issues in WebKit)
+  const maskOuterRef = useRef<HTMLDivElement>(null);
+  const maskMiddleRef = useRef<HTMLDivElement>(null);
+  const maskInnerRef = useRef<HTMLDivElement>(null);
+
+  // Helper: build a radial mask gradient string
+  const buildMask = (r: number, x: number, y: number) =>
+    `radial-gradient(circle ${r}px at ${x}px ${y}px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 99.5%, white 100%)`;
+
+  // Apply masks directly via DOM — more reliable than MotionValue style in Safari 27
+  useEffect(() => {
+    const applyMask = (el: HTMLElement | null, value: string) => {
+      if (!el) return;
+      el.style.setProperty('-webkit-mask-image', value);
+      el.style.setProperty('mask-image', value);
+    };
+
+    const unsubMain = smoothX.on('change', () => {
+      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
+    });
+    const unsubMainY = smoothY.on('change', () => {
+      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
+    });
+    const unsubMainR = mainRadius.on('change', () => {
+      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
+    });
+    const unsubTrailX = trailX.on('change', () => {
+      applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
+    });
+    const unsubTrailY = trailY.on('change', () => {
+      applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
+    });
+    const unsubSlowX = slowX.on('change', () => {
+      applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
+    });
+    const unsubSlowY = slowY.on('change', () => {
+      applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
+    });
+
+    // Set initial masks
+    applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
+    applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
+    applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
+
+    return () => {
+      unsubMain(); unsubMainY(); unsubMainR();
+      unsubTrailX(); unsubTrailY();
+      unsubSlowX(); unsubSlowY();
+    };
+  }, []);
 
   const movementBuffer = useRef<{ x: number; y: number; time: number }[]>([]);
 
@@ -137,16 +183,6 @@ const Hero: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // GPU layer promotion: only while hero is in viewport
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsInView(entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   // Lightbox navigation
   const handlePrevImage = () => {
@@ -275,7 +311,7 @@ const Hero: React.FC = () => {
 
         {/* PHOTO GRID - 4x8 on desktop, 4x5 on mobile (no overflow) */}
         <div className={`flex-1 w-full flex items-center justify-center transition-all duration-1000 ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full">
             {(isMobile ? images.slice(0, 20) : images).map((img, i) => (
               <motion.div
                 key={i}
@@ -350,44 +386,45 @@ const Hero: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* LAYER 2: CSS-MASKED OVERLAY (cursor animation - desktop only) */}
+      {/* LAYER 2: CSS-MASKED OVERLAY (cursor animation - desktop only)
+           Uses nested elements instead of mask-composite for Safari compatibility.
+           Each div applies one mask via direct DOM refs — nesting achieves the intersect effect naturally. */}
       {!isMobile && (
         <motion.div
           className="absolute inset-0 z-10 pointer-events-none"
-          style={{
-            WebkitMaskImage: maskImage,
-            maskImage: maskImage,
-            WebkitMaskComposite: 'source-in, source-in',
-            maskComposite: 'intersect, intersect',
-            willChange: isInView ? '-webkit-mask-image, mask-image' : 'auto',
-          }}
           animate={{ opacity: isFullyRevealed ? 0 : 1 }}
           transition={{ duration: 0.8 }}
         >
-          <div className="absolute inset-0 bg-[#FBFAF8]" />
-          <div className="relative h-full w-full">
-            {/* Scroll Indicator - Bottom Middle */}
-            <div className="absolute bottom-[28px] left-1/2 -translate-x-1/2 text-charcoal/20">
-              <ChevronDown size={32} strokeWidth={1.5} />
-            </div>
+          <div ref={maskOuterRef} className="absolute inset-0">
+            <div ref={maskMiddleRef} className="absolute inset-0">
+              <div ref={maskInnerRef} className="absolute inset-0">
+                <div className="absolute inset-0 bg-[#FBFAF8]" />
+                <div className="relative h-full w-full">
+                  {/* Scroll Indicator - Bottom Middle */}
+                  <div className="absolute bottom-[28px] left-1/2 -translate-x-1/2 text-charcoal/20">
+                    <ChevronDown size={32} strokeWidth={1.5} />
+                  </div>
 
-            {/* Bottom-Left Stack Container */}
-            <div className="absolute bottom-[60px] left-[60px] flex flex-col items-start whitespace-nowrap">
+                  {/* Bottom-Left Stack Container */}
+                  <div className="absolute bottom-[60px] left-[60px] flex flex-col items-start whitespace-nowrap">
 
-              {/* Role Stack */}
-              <div className="flex flex-col font-sans mb-[clamp(20px,3.6vw,58px)]">
-                <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
-                  Product Manager
-                </span>
-                <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
-                  Based in San Francisco
-                </span>
-              </div>
+                    {/* Role Stack */}
+                    <div className="flex flex-col font-sans mb-[clamp(20px,3.6vw,58px)]">
+                      <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
+                        Product Manager
+                      </span>
+                      <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
+                        Based in San Francisco
+                      </span>
+                    </div>
 
-              {/* Name Stack */}
-              <div className="flex flex-col items-start font-serif font-normal text-[12vw] leading-[0.92] text-charcoal">
-                <span className="tracking-[-0.04em] -ml-[0.06em]">Aditya</span>
-                <span className="text-moss tracking-[-0.02em] -ml-[0.05em]">Vishwakarma</span>
+                    {/* Name Stack */}
+                    <div className="flex flex-col items-start font-serif font-normal text-[12vw] leading-[0.92] text-charcoal">
+                      <span className="tracking-[-0.04em] -ml-[0.06em]">Aditya</span>
+                      <span className="text-moss tracking-[-0.02em] -ml-[0.05em]">Vishwakarma</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
