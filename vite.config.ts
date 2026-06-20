@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'; // 👈 1. Import this
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/twentytwentysix-portfolio/',
+    base: '/',
     server: {
       port: 3000,
       host: '0.0.0.0',
