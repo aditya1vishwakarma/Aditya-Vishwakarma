@@ -329,6 +329,7 @@ const MoodBoardV2Page: React.FC = () => {
   const [hoveredItem, setHoveredItem] = useState<MoodBoardItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [viewMode, setViewMode] = useState<'circle' | 'grid'>('grid');
+  const [gridItems] = useState<MoodBoardItem[]>(() => [...MOOD_BOARD].sort(() => Math.random() - 0.5));
 
   // Smooth the progress for the loading bar
   const animatedProgress = useSpring(progress, { stiffness: 50, damping: 20 });
@@ -397,24 +398,24 @@ const MoodBoardV2Page: React.FC = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pointer-events-auto">
 
           {/* View Toggle */}
-          <div className="flex items-center bg-charcoal/5 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
-            <button
-              onClick={() => setViewMode('circle')}
-              className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'circle'
-                  ? 'bg-white text-charcoal shadow-sm'
-                  : 'text-charcoal/40 hover:text-charcoal/70'
-                }`}
-            >
-              Ring
-            </button>
+          <div className="flex items-center bg-white/50 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
             <button
               onClick={() => setViewMode('grid')}
               className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'grid'
-                  ? 'bg-white text-charcoal shadow-sm'
-                  : 'text-charcoal/40 hover:text-charcoal/70'
+                ? 'bg-white text-charcoal shadow-sm'
+                : 'text-charcoal/60 hover:text-charcoal/90'
                 }`}
             >
               Grid
+            </button>
+            <button
+              onClick={() => setViewMode('circle')}
+              className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'circle'
+                ? 'bg-white text-charcoal shadow-sm'
+                : 'text-charcoal/60 hover:text-charcoal/90'
+                }`}
+            >
+              Ring
             </button>
           </div>
 
@@ -439,7 +440,7 @@ const MoodBoardV2Page: React.FC = () => {
 
         <Link
           to="/#about"
-          className="pointer-events-auto flex items-center justify-center text-center min-w-[120px] font-serif italic font-medium text-2xl px-6 py-3 text-charcoal bg-charcoal/5 border border-charcoal/10 rounded-[22px] backdrop-blur-xl hover:bg-charcoal/10 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
+          className="pointer-events-auto flex items-center justify-center text-center min-w-[120px] font-serif italic font-medium text-2xl px-6 py-3 text-charcoal bg-white/50 border border-charcoal/10 rounded-[22px] backdrop-blur-xl hover:bg-white/60 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
         >
           Home
         </Link>
@@ -476,7 +477,7 @@ const MoodBoardV2Page: React.FC = () => {
         <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[140px] pb-24 px-6 md:px-12 pointer-events-auto">
           <div className="max-w-[1600px] mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
             {MOOD_BOARD.map((item) => (
-              <div key={item.id} className="break-inside-avoid mb-6">
+              <div key={item.id} className="inline-block w-full break-inside-avoid mb-6">
                 <MoodBoardCard item={item} />
               </div>
             ))}

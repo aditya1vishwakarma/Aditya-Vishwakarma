@@ -16,7 +16,8 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({ item, isPopup = false }) 
         background: 'rgba(251, 250, 248, 0.60)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        boxShadow: '0 8px 16px -4px rgba(0,0,0,0.05), 0 16px 24px -4px rgba(0,0,0,0.05), 0 24px 32px -4px rgba(0,0,0,0.05)'
+        boxShadow: '0 8px 16px -4px rgba(0,0,0,0.05), 0 16px 24px -4px rgba(0,0,0,0.05), 0 24px 32px -4px rgba(0,0,0,0.05)',
+        transform: 'translateZ(0)'
       }}
       onClick={(e: React.MouseEvent) => {
         if (isPopup) e.stopPropagation();
@@ -26,7 +27,11 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({ item, isPopup = false }) 
         <div className="flex-shrink-0">
           <div
             className="w-full overflow-hidden"
-            style={{ borderRadius: '16px' }}
+            style={{ 
+              borderRadius: '16px',
+              transform: 'translateZ(0)',
+              WebkitMaskImage: '-webkit-radial-gradient(white, black)'
+            }}
           >
             <img
               src={item.imageUrl}

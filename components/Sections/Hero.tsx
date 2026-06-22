@@ -266,58 +266,31 @@ const Hero: React.FC = () => {
           {isFullyRevealed && (
             <motion.div
               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className="w-full px-4 md:px-10 py-4 md:py-6 z-20 pointer-events-auto"
+              className="w-full pt-10 pl-4 md:pl-10 pr-10 pb-4 z-20 pointer-events-auto flex justify-between items-center"
             >
-              {isMobile ? (
-                /* MOBILE: Stacked layout - Back button on top, then branding */
-                <div className="flex flex-col gap-4">
-                  <button
-                    onClick={handleHide}
-                    className="w-10 h-10 flex items-center justify-center text-moss hover:text-charcoal transition-colors -ml-2"
-                  >
-                    <ArrowLeft size={24} />
-                  </button>
-                  <div>
-                    <h2 className="font-serif text-2xl text-charcoal tracking-tight">
-                      Aditya <span className="text-moss font-serif font-normal tracking-[-0.03em]">Vishwakarma</span>
-                    </h2>
-                    <p className="font-serif text-sm text-charcoal/60 mt-1">
-                      Hobbyist photographer
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                /* DESKTOP: Horizontal layout */
-                <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-                  <div>
-                    <h2 className="font-serif text-2xl md:text-3xl text-charcoal tracking-tight">
-                      Aditya <span className="text-moss font-serif font-normal tracking-[-0.03em]">Vishwakarma</span>
-                    </h2>
-                    <p className="font-serif text-sm md:text-base text-charcoal/60 mt-1">
-                      I am also a hobbyist photographer, here are some of my favorites.
-                    </p>
-                  </div >
-                  <motion.button
-                    onClick={handleHide}
-                    className="px-8 py-3 bg-moss text-white rounded-full font-sans text-sm tracking-[0.06em] uppercase hover:bg-charcoal transition-all shadow-2xl active:scale-95"
-                  >
-                    Hide
-                  </motion.button>
-                </div>
-              )}
+              <p className="font-serif text-xl md:text-2xl text-charcoal/80 max-w-[70%] leading-none transform translate-y-[2px]">
+                {isMobile ? "I'm also a hobbyist photographer!" : "I'm also a hobbyist photographer, here are some of my favorites!"}
+              </p>
+
+              <motion.button
+                onClick={handleHide}
+                className="w-[140px] py-3 bg-moss text-white rounded-full font-sans text-sm tracking-[0.1em] uppercase hover:bg-charcoal transition-all shadow-2xl active:scale-95 shrink-0"
+              >
+                Hide
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* PHOTO GRID - 4x8 on desktop, 4x5 on mobile (no overflow) */}
-        <div className={`flex-1 w-full flex items-center justify-center transition-all duration-1000 ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full">
+        <div className={`flex-1 w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full max-h-full aspect-[4/5] md:aspect-[2/1]">
             {(isMobile ? images.slice(0, 20) : images).map((img, i) => (
               <motion.div
                 key={i}
                 whileHover={{ scale: 1.05, zIndex: 10, transition: { duration: 0.2 } }}
                 onClick={() => isFullyRevealed && setSelectedImageIndex(i)}
-                className="cursor-pointer overflow-hidden aspect-square shadow-sm hover:shadow-2xl transition-shadow bg-white/10"
+                className="cursor-pointer overflow-hidden w-full h-full shadow-sm hover:shadow-2xl transition-shadow bg-white/10"
               >
                 <img
                   src={img.preview}
@@ -465,7 +438,7 @@ const Hero: React.FC = () => {
             <motion.button
               key="reveal-btn" onClick={handleReveal}
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-              className="px-8 py-3 bg-moss text-white rounded-full font-sans text-sm tracking-[0.01em] uppercase hover:bg-charcoal transition-all shadow-2xl active:scale-95"
+              className="w-[140px] py-3 bg-moss text-white rounded-full font-sans text-sm tracking-[0.01em] uppercase hover:bg-charcoal transition-all shadow-2xl active:scale-95"
             >
               Reveal
             </motion.button>
