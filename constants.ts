@@ -62,7 +62,7 @@ export const PROJECTS: Project[] = [
 export const BLOG_POSTS: BlogPost[] = [
   {
     id: '2',
-    title: 'Curators are the Stewards',
+    title: 'On Curation',
     date: 'Random Note, 2025',
     readTime: '1 min read',
     category: 'Random Thoughts',
