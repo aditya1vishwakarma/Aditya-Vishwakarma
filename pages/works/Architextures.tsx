@@ -37,6 +37,9 @@ const Architextures = () => {
         <p className="text-lg leading-relaxed text-charcoal/70 mb-4">
           The premise is simple. Photograph architecture, interior design, and the app tells you what it sees: materials, structural elements, stylistic periods. You accept, reject, or add your own labels. Over time, your library becomes a personal taxonomy of the built world, organized by the descriptors that matter to you.
         </p>
+        <p className="text-lg leading-relaxed text-charcoal/70 mb-4">
+          Rather than have my references get lost in my camera roll or end up endlessly scrolling ‘inspiration’ boards on pintrest or instagram, I used frameworks like Vision and CreateML to help me capture the beauty of the world around me.
+        </p>
       </div>
 
       <div className="mb-16">
