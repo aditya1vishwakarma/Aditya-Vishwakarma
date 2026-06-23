@@ -4,7 +4,7 @@ import WritingLayout from '../../components/Writing/WritingLayout';
 const Curation = () => {
   return (
     <WritingLayout
-      title="Curators are the Stewards"
+      title="On Curation"
       date="Random Note, 2025"
       readTime="1 min read"
       category="Random Thoughts"
