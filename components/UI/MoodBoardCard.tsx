@@ -36,6 +36,8 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({ item, isPopup = false }) 
             <img
               src={item.imageUrl}
               alt={item.title}
+              loading={isPopup ? 'eager' : 'lazy'}
+              decoding="async"
               className={`w-full h-auto object-cover block ${isPopup ? 'max-h-[70vh]' : ''}`}
             />
           </div>

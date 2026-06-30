@@ -320,10 +320,17 @@ const TopDownCamera: React.FC = () => {
  * Page — orchestrates loading → scene
  * ───────────────────────────────────────────── */
 const MoodBoardV2Page: React.FC = () => {
-  const { textures, loadedCount, total } = usePreloadTextures(MOOD_BOARD);
+  // Detect mobile once on mount. The 3D ring is disabled on mobile, so there's
+  // no need to preload textures there — doing so would block the loading overlay
+  // (and therefore grid scrolling) until every image fetch completes.
+  const [isMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  );
+
+  const { textures, loadedCount, total } = usePreloadTextures(isMobile ? [] : MOOD_BOARD);
   const progress = total > 0 ? (loadedCount / total) * 100 : 100;
 
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(() => isMobile);
   const [speed, setSpeed] = useState(0.05);
   const [selectedItem, setSelectedItem] = useState<MoodBoardItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<MoodBoardItem | null>(null);
@@ -334,13 +341,15 @@ const MoodBoardV2Page: React.FC = () => {
   // Smooth the progress for the loading bar
   const animatedProgress = useSpring(progress, { stiffness: 50, damping: 20 });
 
-  // When loading completes, wait a beat then reveal
+  // When loading completes, wait a beat then reveal. On mobile we're already
+  // ready (no texture preload), so skip the overlay entirely.
   useEffect(() => {
+    if (isMobile) return;
     if (progress >= 100) {
       const timer = setTimeout(() => setIsReady(true), 800);
       return () => clearTimeout(timer);
     }
-  }, [progress]);
+  }, [progress, isMobile]);
 
   const handleSelectItem = useCallback((item: MoodBoardItem | null) => {
     setSelectedItem(item);
@@ -394,11 +403,11 @@ const MoodBoardV2Page: React.FC = () => {
       </AnimatePresence>
 
       {/* ──── TOP BAR ──── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex flex-col md:flex-row items-start md:items-center justify-between px-8 py-6 pointer-events-none gap-4">
+      <div className="fixed top-0 left-0 right-0 z-50 flex flex-row items-start md:items-center justify-between px-5 md:px-8 py-5 md:py-6 pointer-events-none gap-4">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pointer-events-auto">
 
-          {/* View Toggle */}
-          <div className="flex items-center bg-white/50 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
+          {/* View Toggle — Ring is disabled on mobile, so hide the toggle there */}
+          <div className="hidden md:flex items-center bg-white/50 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
             <button
               onClick={() => setViewMode('grid')}
               className={`px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'grid'
@@ -440,7 +449,7 @@ const MoodBoardV2Page: React.FC = () => {
 
         <Link
           to="/#about"
-          className="pointer-events-auto flex items-center justify-center text-center min-w-[120px] font-serif italic font-medium text-2xl px-6 py-3 text-charcoal bg-white/50 border border-charcoal/10 rounded-[22px] backdrop-blur-xl hover:bg-white/60 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
+          className="pointer-events-auto flex items-center justify-center text-center min-w-0 md:min-w-[120px] font-serif italic font-medium text-base md:text-2xl px-4 md:px-6 py-1.5 md:py-3 text-charcoal bg-white/50 border border-charcoal/10 rounded-[16px] md:rounded-[22px] backdrop-blur-xl hover:bg-white/60 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
         >
           Home
         </Link>
