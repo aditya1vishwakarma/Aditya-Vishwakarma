@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion as motionComponent, useSpring, useMotionValue } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import { ChevronUp } from 'lucide-react';
 
 const motion = motionComponent as any;
 
@@ -95,8 +95,7 @@ const CircularScrollIndicator: React.FC = () => {
       className={`
         fixed z-50 flex items-center justify-end overflow-hidden
         right-6 lg:right-auto lg:left-[calc(50%+24rem+2rem)]
-        bg-white/10 backdrop-blur-[20px] 
-        shadow-[0_20px_60px_-12px_rgba(0,0,0,0.20)]
+        backdrop-blur-[20px] backdrop-saturate-150
         text-charcoal font-sans text-xs uppercase tracking-widest font-bold
         cursor-pointer
       `}
@@ -105,8 +104,10 @@ const CircularScrollIndicator: React.FC = () => {
         borderRadius: '20px',
         width: showText ? '160px' : '40px',
         bottom: smoothBottom,
-        transition: 'width 0.5s ease-out, shadow 0.5s ease-out',
-        border: 'none',
+        transition: 'width 0.5s ease-out',
+        border: '1px solid rgba(255,255,255,0.2)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 0%)',
+        boxShadow: 'inset 0 1.5px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0,0,0,0.05), 0 20px 60px -12px rgba(0,0,0,0.20)',
       }}
     >
       {/* "Back to Top" Text */}
@@ -119,28 +120,37 @@ const CircularScrollIndicator: React.FC = () => {
       </div>
 
       {/* The 40x40 circle area pinned to the right */}
-      <div className="absolute right-0 top-0 w-[40px] h-[40px] flex items-center justify-center rounded-full pointer-events-none">
+      <div
+        className="absolute right-0 top-1/2 -translate-y-1/2 w-[40px] h-[40px] pointer-events-none"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
         {(isMobile && !isFinished) && (
-          <ArrowUp size={16} style={{ color: 'var(--color-moss)' }} />
+          <ChevronUp size={16} style={{ color: 'var(--color-moss)', position: 'relative', zIndex: 1 }} />
         )}
 
         {/* Background track */}
-        <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0 rotate-[-90deg]">
+        <svg
+          width="40" height="40" viewBox="0 0 40 40"
+          style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}
+        >
           <circle
-            cx="20" cy="20" r="16"
+            cx="20" cy="20" r="15"
             fill="transparent"
-            stroke="rgba(51,51,51,0.05)"
-            strokeWidth="3"
+            stroke="rgba(51,51,51,0.08)"
+            strokeWidth="2.5"
           />
         </svg>
 
         {/* Foreground progress ring */}
-        <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0 rotate-[-90deg]">
+        <svg
+          width="40" height="40" viewBox="0 0 40 40"
+          style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}
+        >
           <motion.circle
-            cx="20" cy="20" r="16"
+            cx="20" cy="20" r="15"
             fill="transparent"
             stroke="var(--color-moss)"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinecap="round"
             style={{ pathLength: smoothProgress }}
           />
