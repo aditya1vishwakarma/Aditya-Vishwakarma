@@ -46,10 +46,10 @@ const DJXProject = () => {
       <Section>
         <H2>Why This Problem</H2>
         <P>
-          Music is something I care deeply about, and Spotify is something I've used for over a decade. For a project like this, I wanted to work on something I would genuinely want to use or a problem I was genuinely having. In this case, that meant improving how Spotify's recommendation engine handles continuity. Because sometimes it misses the mark, not by suggesting bad songs, but by breaking a reccomendation streak you did not want broken.
+          Music is something I care deeply about, and Spotify is something I had used for over a decade. For a project like this, I wanted to work on something I would genuinely want to use or a problem I was actually having. In this case, that meant improving how Spotify's recommendation engine handles continuity. Because sometimes it misses the mark simply by breaking a vibe I didn't want broken.
         </P>
         <P>
-          I also needed to see past Spotify's existing recommendation biases. I have used the platform long enough to notice the nuances. Song radio, for example, leans heavily on your existing history. Spotify has released features over time that discount personalization, but they are not particularly accessible. The feature I started thinking about sits in that same space: relying on the pure recommendation engine, stripped of personal bias, and putting it to work for a short, focused period.
+          In my experience, something like song radio, for example, leans heavily on my own existing history. Spotify has released features over time that discount personalization, but they aren't particularly easily accessible at the time of this project. The feature I'd want to make would sit at this intersection. Take the existing recommendation engine and allow the user to reign over it for a short, but focused period of time.
         </P>
       </Section>
 
