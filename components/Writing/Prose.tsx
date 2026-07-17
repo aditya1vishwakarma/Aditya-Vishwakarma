@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion as motionComponent, AnimatePresence } from 'framer-motion';
 import OptimizedImage from '../UI/OptimizedImage';
+
+const motion = motionComponent as any;
 
 // ─── Shared Types ────────────────────────────────────────────────
 
@@ -79,7 +82,7 @@ export const Callout: React.FC<BleedableProps> = ({ children, bleed, className =
 
 /** Groups related content with consistent bottom spacing. */
 export const Section: React.FC<ProseBaseProps> = ({ children, className = '' }) => (
-  <div className={`mb-10 ${className}`}>{children}</div>
+  <div className={`mb-6 ${className}`}>{children}</div>
 );
 
 // ─── Code ────────────────────────────────────────────────────────
@@ -112,7 +115,7 @@ interface ImgProps extends BleedableProps {
 export const Img: React.FC<ImgProps> = ({
   src, alt, caption, bleed, aspectRatio = 'aspect-auto', priority, className = ''
 }) => (
-  <figure className={`my-8 ${bleedClass(bleed)} ${className}`}>
+  <figure className={`my-4 ${bleedClass(bleed)} ${className}`}>
     <OptimizedImage
       src={src}
       alt={alt}
@@ -165,6 +168,294 @@ export const Video: React.FC<VideoProps> = ({
   </figure>
 );
 
+// ─── Media Gallery ───────────────────────────────────────────────
+
+interface MediaItem {
+  /** 'image' (default) or 'video'. */
+  type?: 'image' | 'video';
+  /** CDN url for the media. */
+  src: string;
+  /** Alt text (images) or aria-label (videos). */
+  alt?: string;
+  /** Optional per-slide caption. */
+  caption?: string;
+}
+
+interface MediaGalleryProps extends BleedableProps {
+  /** Array of images / videos to display in the carousel. */
+  items: MediaItem[];
+  /** Gallery-level caption rendered below the carousel. */
+  caption?: string;
+}
+
+/**
+ * Horizontal media carousel with lightbox.
+ *
+ * - Scroll-snap carousel with left / right arrows (desktop) and swipe (mobile).
+ * - Tap an image to open a full-resolution lightbox overlay.
+ * - Arrow keys + Escape for keyboard navigation inside the lightbox.
+ * - Tap the backdrop or press Escape to dismiss.
+ * - Videos are rendered inline with native controls; they do not open a lightbox.
+ */
+export const MediaGallery: React.FC<MediaGalleryProps> = ({
+  items, caption, bleed, className = ''
+}) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  // ── Scroll-state for arrow visibility ──────────────────────────
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      el.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [updateScrollState]);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+
+  // ── Lightbox helpers ───────────────────────────────────────────
+  // Filter to only image items for lightbox navigation
+  const imageIndices = items
+    .map((item, i) => (item.type !== 'video' ? i : -1))
+    .filter(i => i !== -1);
+
+  const openLightbox = (index: number) => {
+    if (items[index]?.type === 'video') return; // videos stay inline
+    setLightboxIndex(index);
+  };
+
+  const closeLightbox = () => setLightboxIndex(null);
+
+  const navigateLightbox = useCallback((dir: 1 | -1) => {
+    setLightboxIndex(prev => {
+      if (prev === null) return null;
+      const currentPosInImageList = imageIndices.indexOf(prev);
+      if (currentPosInImageList === -1) return null;
+      const next = (currentPosInImageList + dir + imageIndices.length) % imageIndices.length;
+      return imageIndices[next];
+    });
+  }, [imageIndices]);
+
+  // ── Keyboard nav ───────────────────────────────────────────────
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      else if (e.key === 'ArrowRight') navigateLightbox(1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIndex, navigateLightbox]);
+
+  // ── Lock body scroll when lightbox is open ─────────────────────
+  useEffect(() => {
+    if (lightboxIndex !== null) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [lightboxIndex]);
+
+  // ── Touch swipe for lightbox ───────────────────────────────────
+  const handleLightboxTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleLightboxTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 50) {
+      navigateLightbox(diff > 0 ? -1 : 1);
+    }
+    touchStartX.current = null;
+  };
+
+  // ── Counter text ───────────────────────────────────────────────
+  const lightboxPosition = lightboxIndex !== null
+    ? `${imageIndices.indexOf(lightboxIndex) + 1} / ${imageIndices.length}`
+    : '';
+
+  return (
+    <>
+      <figure className={`my-8 ${bleedClass(bleed)} ${className}`}>
+        {/* ── Carousel container ──────────────────────────────── */}
+        <div className="relative group">
+          {/* Scroll track */}
+          <div
+            ref={scrollRef}
+            data-media-gallery-scroll
+            className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <style>{`[data-media-gallery-scroll]::-webkit-scrollbar { display: none; }`}</style>
+            {items.map((item, i) => (
+              <div
+                key={i}
+                className="snap-start shrink-0 first:pl-0 last:pr-0"
+                style={{ width: items.length === 1 ? '100%' : 'clamp(280px, 75%, 720px)' }}
+              >
+                {item.type === 'video' ? (
+                  <div className="overflow-hidden rounded-squircle shadow-md border border-charcoal/10 bg-charcoal/5">
+                    <video
+                      src={item.src}
+                      controls
+                      playsInline
+                      muted
+                      className="w-full h-auto object-cover max-h-[60vh]"
+                      aria-label={item.alt}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openLightbox(i)}
+                    className="block w-full text-left cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/40 rounded-squircle"
+                  >
+                    <OptimizedImage
+                      src={item.src}
+                      alt={item.alt || ''}
+                      className="w-full h-auto rounded-squircle shadow-md"
+                    />
+                  </button>
+                )}
+                {item.caption && (
+                  <p className="text-xs md:text-sm text-charcoal/50 mt-2 text-center italic">
+                    {item.caption}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* ── Left / Right arrows (desktop, shown on hover) ── */}
+          {items.length > 1 && canScrollLeft && (
+            <button
+              onClick={() => scrollBy(-1)}
+              aria-label="Scroll gallery left"
+              className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/80 backdrop-blur shadow-md border border-charcoal/10 text-charcoal/60 hover:text-charcoal hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+          )}
+          {items.length > 1 && canScrollRight && (
+            <button
+              onClick={() => scrollBy(1)}
+              aria-label="Scroll gallery right"
+              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/80 backdrop-blur shadow-md border border-charcoal/10 text-charcoal/60 hover:text-charcoal hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          )}
+        </div>
+
+        {/* ── Dot indicators ──────────────────────────────────── */}
+        {items.length > 1 && (
+          <div className="flex justify-center gap-1.5 mt-4">
+            {items.map((_, i) => (
+              <span key={i} className="w-1.5 h-1.5 rounded-full bg-charcoal/20" />
+            ))}
+          </div>
+        )}
+
+        {/* ── Gallery-level caption ───────────────────────────── */}
+        {caption && (
+          <figcaption className="text-xs md:text-sm text-charcoal/50 mt-3 text-center italic">
+            {caption}
+          </figcaption>
+        )}
+      </figure>
+
+      {/* ── Lightbox overlay (portalled to body via React) ──── */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            onClick={closeLightbox}
+            onTouchStart={handleLightboxTouchStart}
+            onTouchEnd={handleLightboxTouchEnd}
+          >
+            {/* Counter */}
+            <span className="absolute top-6 left-6 text-white/60 text-sm font-sans tracking-wide">
+              {lightboxPosition}
+            </span>
+
+            {/* Close button */}
+            <button
+              onClick={closeLightbox}
+              className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors z-10"
+              aria-label="Close lightbox"
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            {/* Left arrow (desktop) */}
+            {imageIndices.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox(-1); }}
+                className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors z-10"
+                aria-label="Previous image"
+              >
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            )}
+
+            {/* Right arrow (desktop) */}
+            {imageIndices.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox(1); }}
+                className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors z-10"
+                aria-label="Next image"
+              >
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
+
+            {/* Full-resolution image */}
+            <motion.img
+              key={lightboxIndex}
+              src={items[lightboxIndex].src}
+              alt={items[lightboxIndex].alt || 'Enlarged image'}
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="max-w-[90vw] max-h-[85vh] object-contain shadow-2xl rounded-lg"
+              onClick={(e: any) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 // ─── Utility ─────────────────────────────────────────────────────
 
 /** Small muted text for image/embed descriptions. */
@@ -190,7 +481,7 @@ export const List: React.FC<ListProps> = ({ children, type = 'bullet', className
   const Tag = type === 'numbered' ? 'ol' : 'ul';
   const listStyle = type === 'numbered' ? 'list-decimal' : 'list-disc';
   return (
-    <Tag className={`${listStyle} list-inside space-y-2 text-charcoal/70 text-lg mb-4 ${className}`}>
+    <Tag className={`${listStyle} list-outside pl-6 space-y-2 text-charcoal/70 text-lg mb-4 ${className}`}>
       {children}
     </Tag>
   );

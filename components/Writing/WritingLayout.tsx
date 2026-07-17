@@ -42,7 +42,7 @@ const WritingLayout: React.FC<WritingLayoutProps> = ({
 
         <div className="editorial-grid relative">
           {/* Header Section (falls into the reading column text block) */}
-          <div className="mb-16">
+          <div className="mb-6">
             <Link to={backLink.path} className="inline-flex items-center gap-2 text-charcoal/40 hover:text-moss mb-12 transition-colors group">
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               <span className="uppercase tracking-widest text-[10px] font-bold">{backLink.label}</span>

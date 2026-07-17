@@ -10,6 +10,7 @@ const CircularScrollIndicator: React.FC = () => {
   const [isFinished, setIsFinished] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [isScrollable, setIsScrollable] = useState(true);
 
   // Smooth the scroll progress so the circle fills organically
   const smoothProgress = useSpring(progressValue, {
@@ -67,6 +68,14 @@ const CircularScrollIndicator: React.FC = () => {
     const handleResize = () => {
       handleScroll();
       setIsMobile(window.innerWidth < 1024);
+      
+      const article = document.querySelector('article');
+      if (article) {
+        const rect = article.getBoundingClientRect();
+        const articleAbsoluteBottom = rect.top + window.scrollY + rect.height;
+        // Require at least 50px of scrolling past the window to show the indicator
+        setIsScrollable(articleAbsoluteBottom > window.innerHeight + 50);
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -85,15 +94,26 @@ const CircularScrollIndicator: React.FC = () => {
 
   const showText = isMobile ? isFinished : (isHovered || isFinished);
 
+  if (!isScrollable) return null;
+
   return (
     <motion.button
       onClick={handleScrollToTop}
       onMouseEnter={() => !isMobile && setIsHovered(true)}
       onMouseLeave={() => !isMobile && setIsHovered(false)}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.9, width: 40 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        width: showText ? 160 : 40
+      }}
+      transition={{
+        width: { type: "spring", stiffness: 260, damping: 26 },
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.3 }
+      }}
       className={`
-        fixed z-50 flex items-center justify-end overflow-hidden
+        fixed z-50 flex items-center justify-end lg:justify-start overflow-hidden
         right-6 lg:right-auto lg:left-[calc(50%+24rem+2rem)]
         backdrop-blur-[20px] backdrop-saturate-150
         text-charcoal font-sans text-xs uppercase tracking-widest font-bold
@@ -102,26 +122,34 @@ const CircularScrollIndicator: React.FC = () => {
       style={{
         height: '40px',
         borderRadius: '20px',
-        width: showText ? '160px' : '40px',
         bottom: smoothBottom,
-        transition: 'width 0.5s ease-out',
         border: '1px solid rgba(255,255,255,0.2)',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 0%)',
         boxShadow: 'inset 0 1.5px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0,0,0,0.05), 0 20px 60px -12px rgba(0,0,0,0.20)',
       }}
     >
       {/* "Back to Top" Text */}
-      <div
-        className={`whitespace-nowrap transition-opacity duration-350 ${showText ? 'opacity-100 delay-150' : 'opacity-0'
-          }`}
-        style={{ paddingLeft: '20px', paddingRight: '48px' }}
+      <motion.div
+        initial={false}
+        animate={{
+          opacity: showText ? 1 : 0,
+          scale: showText ? 1 : 0.95,
+          x: showText ? 0 : (isMobile ? 15 : -15)
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 260,
+          damping: 26,
+          delay: showText ? 0.05 : 0
+        }}
+        className="whitespace-nowrap pl-[20px] pr-[48px] lg:pl-[48px] lg:pr-[20px]"
       >
         Back to Top
-      </div>
+      </motion.div>
 
-      {/* The 40x40 circle area pinned to the right */}
+      {/* The 40x40 circle area pinned to the right on mobile, left on desktop */}
       <div
-        className="absolute right-0 top-1/2 -translate-y-1/2 w-[40px] h-[40px] pointer-events-none"
+        className="absolute right-0 lg:right-auto lg:left-0 top-1/2 -translate-y-1/2 w-[40px] h-[40px] pointer-events-none"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         {(isMobile && !isFinished) && (
