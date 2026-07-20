@@ -49,7 +49,7 @@ export const PROJECTS: Project[] = [
   {
     id: '5',
     title: 'Apple Music Desktop Redesign',
-    category: 'Un-Selected Works',
+    category: 'Learning: Design',
     description: 'An attempt to re-make components and un-antiquate the Apple Music Desktop app in 2025.',
     fullDescription: 'A project that attempts to re-make components and un-antiquate the Apple Music Desktop app in 2025.',
     imageUrl: '',

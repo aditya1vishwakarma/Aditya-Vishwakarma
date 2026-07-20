@@ -6,7 +6,7 @@ const AMDesktopRed = () => {
     return (
         <WritingLayout
             title="Apple Music Desktop 'Redesign'"
-            category="Un-Selected Works"
+            category="Learning: Design"
             backLink={{ path: '/works', label: 'Back to Works' }}
         >
             <Section>

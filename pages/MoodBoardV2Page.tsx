@@ -212,11 +212,11 @@ interface RingProps {
   selectedId: string | null;
   onSelectItem: (item: MoodBoardItem | null) => void;
   textures: Map<string, THREE.Texture>;
+  items: MoodBoardItem[];
 }
 
-const RotatingRing: React.FC<RingProps> = ({ speed, selectedId, onSelectItem, textures }) => {
+const RotatingRing: React.FC<RingProps> = ({ speed, selectedId, onSelectItem, textures, items }) => {
   const groupRef = useRef<THREE.Group>(null!);
-  const items = MOOD_BOARD;
   const count = items.length;
   const radius = Math.max(6, count * 1.2);
 
@@ -476,6 +476,7 @@ const MoodBoardV2Page: React.FC = () => {
             selectedId={selectedItem?.id ?? null}
             onSelectItem={handleSelectItem}
             textures={textures}
+            items={gridItems}
           />
 
           <ContinuousRaycast onHover={handleHover} />
@@ -485,7 +486,7 @@ const MoodBoardV2Page: React.FC = () => {
       {viewMode === 'grid' && (
         <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[140px] pb-24 px-6 md:px-12 pointer-events-auto">
           <div className="max-w-[1600px] mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
-            {MOOD_BOARD.map((item) => (
+            {gridItems.map((item) => (
               <div key={item.id} className="inline-block w-full break-inside-avoid mb-6">
                 <MoodBoardCard item={item} />
               </div>

@@ -105,85 +105,102 @@ const Blog: React.FC = () => {
         <div className="flex flex-col">
           <AnimatePresence mode="popLayout">
             {filteredPosts.map((post, index) => (
-              <motion.article
+              <motion.div
                 key={post.id}
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1], delay: index * 0.05 }}
-                onClick={() => handleArticleInteraction(post.id)}
-                onMouseEnter={() => handleMouseEnter(post.id)}
-                onMouseLeave={handleMouseLeave}
-                className="rounded-lg -mx-4 px-4 py-8 border-b border-charcoal/10 last:border-b-0 cursor-pointer"
-                style={{
-                  backgroundColor: isExpanded(post.id) ? 'rgba(46, 79, 10, 0.03)' : 'transparent',
-                  boxShadow: isExpanded(post.id)
-                    ? '0 8px 32px -8px rgba(46, 79, 10, 0.12), 0 4px 16px -4px rgba(0, 0, 0, 0.04)'
-                    : '0 0 0 0 transparent',
-                  transition: 'background-color 300ms cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1)'
-                }}
               >
-                <Link
-                  to={post.path}
-                  className="flex items-center justify-between gap-6"
-                  onClick={(e: React.MouseEvent) => {
-                    // On mobile, prevent navigation if just expanding
-                    if (isMobile && expandedId !== post.id) {
-                      e.preventDefault();
-                    }
+                {/* DESKTOP VERSION */}
+                <article
+                  onMouseEnter={() => handleMouseEnter(post.id)}
+                  onMouseLeave={handleMouseLeave}
+                  className="hidden md:block rounded-lg -mx-4 px-4 py-8 border-b border-charcoal/10 last:border-b-0 cursor-pointer"
+                  style={{
+                    backgroundColor: isExpanded(post.id) ? 'rgba(46, 79, 10, 0.03)' : 'transparent',
+                    boxShadow: isExpanded(post.id)
+                      ? '0 8px 32px -8px rgba(46, 79, 10, 0.12), 0 4px 16px -4px rgba(0, 0, 0, 0.04)'
+                      : '0 0 0 0 transparent',
+                    transition: 'background-color 300ms cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1)'
                   }}
                 >
-                  <div className="shrink-0 w-full md:w-1/4">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-charcoal/40 font-bold block">
-                      {post.date}
-                    </span>
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-moss font-bold mt-1 block">
-                      {post.category}
-                    </span>
-                  </div>
+                  <Link
+                    to={post.path}
+                    className="flex items-center justify-between gap-6"
+                  >
+                    <div className="shrink-0 w-1/4">
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-charcoal/40 font-bold block">
+                        {post.date}
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-moss font-bold mt-1 block">
+                        {post.category}
+                      </span>
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <motion.h2
-                      className="font-serif text-3xl md:text-4xl text-charcoal leading-snug"
-                      animate={{ x: isExpanded(post.id) ? 4 : 0 }}
-                      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                    >
-                      {post.title}
-                    </motion.h2>
+                    <div className="flex-1 min-w-0">
+                      <motion.h2
+                        className="font-serif text-3xl md:text-4xl text-charcoal leading-snug"
+                        animate={{ x: isExpanded(post.id) ? 4 : 0 }}
+                        transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                      >
+                        {post.title}
+                      </motion.h2>
 
-                    <AnimatePresence>
-                      {isExpanded(post.id) && (
-                        <motion.p
-                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                          animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
-                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                          className="text-base text-charcoal/80 leading-relaxed overflow-hidden font-sans"
-                        >
-                          {post.excerpt}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                      <AnimatePresence>
+                        {isExpanded(post.id) && (
+                          <motion.p
+                            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                            className="text-base text-charcoal/80 leading-relaxed overflow-hidden font-sans"
+                          >
+                            {post.excerpt}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
-                  <div className="shrink-0 w-8 flex items-center justify-center">
-                    <AnimatePresence>
-                      {isExpanded(post.id) && (
-                        <motion.span
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -8 }}
-                          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                          className="text-moss"
-                        >
-                          <ArrowRight size={24} strokeWidth={1.5} />
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </Link>
-              </motion.article>
+                    <div className="shrink-0 w-8 flex items-center justify-center">
+                      <AnimatePresence>
+                        {isExpanded(post.id) && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -8 }}
+                            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                            className="text-moss"
+                          >
+                            <ArrowRight size={24} strokeWidth={1.5} />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </Link>
+                </article>
+
+                {/* MOBILE VERSION */}
+                <article className="md:hidden relative p-8 rounded-3xl bg-[#FBFAF5] border border-charcoal/10 mb-6 transition-transform duration-300 active:scale-[0.98]">
+                  <Link to={post.path} className="flex flex-col w-full h-full">
+                    <div>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-moss/60 font-medium mb-4 block">
+                        {post.category}
+                      </span>
+                      <h3 className="font-serif text-2xl text-charcoal mb-3 leading-tight">
+                        {post.title}
+                      </h3>
+                      <p className="text-charcoal/50 text-[15px] leading-relaxed line-clamp-3 font-sans">
+                        {post.excerpt}
+                      </p>
+                    </div>
+                    <div className="flex justify-end w-full mt-4">
+                      <ArrowRight strokeWidth={1.5} size={24} className="text-moss" />
+                    </div>
+                  </Link>
+                </article>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>
