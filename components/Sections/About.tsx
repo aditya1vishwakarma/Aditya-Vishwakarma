@@ -24,9 +24,8 @@ const About: React.FC = () => {
             <h2 className="font-serif text-[clamp(2.5rem,7vw,4.5rem)] text-charcoal mb-6 leading-none tracking-tight">
               About <span className="text-[#3F6D0D] font-serif font-normal tracking-[-0.02em]">Aditya</span>
             </h2>
-            <p className="text-xl md:text-xl leading-relaxed text-charcoal/80 max-w-lg font-sans">
-              I'm a Bay Area native who grew up in Cupertino, CA and graduated from UCSD in 2021. <br />I really just want to make cool things and help the world be a more beautiful and intentional place.
-              <br /> Currently an APM helping marketing teams scale growth via digital platforms.
+            <p className="text-xl md:text-xl leading-relaxed text-charcoal/80 max-w-3xl font-sans">
+              I'm a Bay Area native who grew up in Cupertino. Currently an APM helping marketing teams scale growth via digital platforms. <br />My goal in life is to make products that real people use, and help the world be a more beautiful and intentional place.
             </p>
           </motion.div>
         </div>
