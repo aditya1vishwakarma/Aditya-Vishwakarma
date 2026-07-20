@@ -25,8 +25,8 @@ const About: React.FC = () => {
               About <span className="text-[#3F6D0D] font-serif font-normal tracking-[-0.02em]">Aditya</span>
             </h2>
             <p className="text-xl md:text-xl leading-relaxed text-charcoal/80 max-w-lg font-sans">
-              Multidisciplinary APM. I fundamentally believe building great things start with the user experience and every decision we make is in service to that.
-              <br /> Currently helping marketing teams scale growth via digital platforms.
+              I'm a Bay Area native who grew up in Cupertino, CA and graduated from UCSD in 2021. <br />I really just want to make cool things and help the world be a more beautiful and intentional place.
+              <br /> Currently an APM helping marketing teams scale growth via digital platforms.
             </p>
           </motion.div>
         </div>
@@ -38,13 +38,13 @@ const About: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-stretch">
           {[
             {
-              title: "My approach to the \"how\"",
-              content: "Bridge the gap of user experience with human intuition as guidance and data as my backup. The final output has to be a natural evolution that is as functional as it is beautiful.",
+              title: "My approach to the \"what\"",
+              content: "Solve the user's problem. Find the signal in the noise, define the product's core issue. and ensuring every design decision is in service of a singular, impactful user experience.",
               isInteractive: false
             },
             {
-              title: "My approach to the \"what\"",
-              content: "Solve the user's problem. Find the signal in the noise, define the product's core issue. and ensuring every design decision is in service of a singular, impactful user experience.",
+              title: "My approach to the \"how\"",
+              content: "Bridge the gap of user experience with human intuition as guidance and data as my backup. The final output has to be a natural evolution that is as functional as it is beautiful.",
               isInteractive: false
             },
             {

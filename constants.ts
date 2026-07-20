@@ -37,14 +37,25 @@ export const PROJECTS: Project[] = [
   },
   {
     id: '4',
-    title: 'Apple Music - Spacial Album Art',
+    title: 'Spacial Album Art',
     category: 'Product Manager',
-    description: 'An attempt to bring a fully immersive artwork experience to all albums.',
-    fullDescription: 'An attempt to bring a fully immersive artwork experience to all albums.',
+    description: 'An attempt to bring a fully immersive artwork experience to Apple Music.',
+    fullDescription: 'A rough idea to bring a fully immersive artwork experience to all albums.',
     imageUrl: '',
     date: 'April 2026',
     role: 'Product Manager',
     path: '/works/SpacialMusic'
+  },
+  {
+    id: '5',
+    title: 'Apple Music Desktop Redesign',
+    category: 'Un-Selected Works',
+    description: 'An attempt to re-make components and un-antiquate the Apple Music Desktop app in 2025.',
+    fullDescription: 'A project that attempts to re-make components and un-antiquate the Apple Music Desktop app in 2025.',
+    imageUrl: '',
+    date: 'March/April 2025',
+    role: 'Product Designer',
+    path: '/works/AMDesktopRed'
   },
   {
     id: '5',
@@ -56,7 +67,7 @@ export const PROJECTS: Project[] = [
     date: 'June 2026',
     role: 'Product Manager',
     path: '/works/photo-captions'
-  },
+  }
 ];
 
 export const BLOG_POSTS: BlogPost[] = [

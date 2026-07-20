@@ -109,20 +109,32 @@ interface ImgProps extends BleedableProps {
   caption?: string;
   aspectRatio?: string;
   priority?: boolean;
+  capped?: boolean;
 }
 
 /** Image with OptimizedImage loading, optional caption, and bleed support. */
 export const Img: React.FC<ImgProps> = ({
-  src, alt, caption, bleed, aspectRatio = 'aspect-auto', priority, className = ''
+  src, alt, caption, bleed, aspectRatio = 'aspect-auto', priority, capped, className = ''
 }) => (
   <figure className={`my-4 ${bleedClass(bleed)} ${className}`}>
-    <OptimizedImage
-      src={src}
-      alt={alt}
-      aspectRatio={aspectRatio}
-      priority={priority}
-      className={`w-full h-auto ${bleed ? 'md:rounded-squircle' : 'rounded-squircle'}`}
-    />
+    {capped ? (
+      <div className="relative h-[600px] w-full overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center rounded-squircle">
+        <img
+          src={src}
+          alt={alt}
+          className="max-h-full max-w-full object-contain"
+          loading={priority ? "eager" : "lazy"}
+        />
+      </div>
+    ) : (
+      <OptimizedImage
+        src={src}
+        alt={alt}
+        aspectRatio={aspectRatio}
+        priority={priority}
+        className={`w-full h-auto ${bleed ? 'md:rounded-squircle' : 'rounded-squircle'}`}
+      />
+    )}
     {caption && (
       <figcaption className="text-xs md:text-sm text-charcoal/50 mt-3 text-center italic">
         {caption}
@@ -205,6 +217,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const touchStartX = useRef<number | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   // ── Scroll-state for arrow visibility ──────────────────────────
   const updateScrollState = useCallback(() => {
@@ -212,6 +225,19 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+    // ── Active card: find the card whose center is closest to the viewport center ──
+    const cards = Array.from(el.children).filter(
+      (c): c is HTMLElement => c instanceof HTMLElement && c.tagName === 'DIV'
+    );
+    if (cards.length > 0) {
+      const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+      let closestIdx = 0, minDist = Infinity;
+      cards.forEach((card, i) => {
+        const dist = Math.abs(card.offsetLeft + card.offsetWidth / 2 - viewportCenter);
+        if (dist < minDist) { minDist = dist; closestIdx = i; }
+      });
+      setActiveIndex(closestIdx);
+    }
   }, []);
 
   useEffect(() => {
@@ -230,6 +256,17 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     const el = scrollRef.current;
     if (!el) return;
     el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+
+  const scrollToCard = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cards = Array.from(el.children).filter(
+      (c): c is HTMLElement => c instanceof HTMLElement && c.tagName === 'DIV'
+    );
+    const card = cards[idx];
+    if (!card) return;
+    el.scrollTo({ left: card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2, behavior: 'smooth' });
   };
 
   // ── Lightbox helpers ───────────────────────────────────────────
@@ -302,24 +339,24 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           <div
             ref={scrollRef}
             data-media-gallery-scroll
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-[12.5%]"
             style={{ scrollbarWidth: 'none' }}
           >
             <style>{`[data-media-gallery-scroll]::-webkit-scrollbar { display: none; }`}</style>
             {items.map((item, i) => (
               <div
                 key={i}
-                className="snap-start shrink-0 first:pl-0 last:pr-0"
+                className="snap-center shrink-0"
                 style={{ width: items.length === 1 ? '100%' : 'clamp(280px, 75%, 720px)' }}
               >
                 {item.type === 'video' ? (
-                  <div className="overflow-hidden rounded-squircle shadow-md border border-charcoal/10 bg-charcoal/5">
+                  <div className="relative h-[600px] overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center">
                     <video
                       src={item.src}
                       controls
                       playsInline
                       muted
-                      className="w-full h-auto object-cover max-h-[60vh]"
+                      className="max-h-full max-w-full object-contain"
                       aria-label={item.alt}
                     >
                       Your browser does not support the video tag.
@@ -329,13 +366,16 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                   <button
                     type="button"
                     onClick={() => openLightbox(i)}
-                    className="block w-full text-left cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/40 rounded-squircle"
+                    className="block w-full text-left cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/40"
                   >
-                    <OptimizedImage
-                      src={item.src}
-                      alt={item.alt || ''}
-                      className="w-full h-auto rounded-squircle shadow-md"
-                    />
+                    <div className="relative h-[600px] overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center">
+                      <img
+                        src={item.src}
+                        alt={item.alt || ''}
+                        className="max-h-full max-w-full object-contain"
+                        loading="lazy"
+                      />
+                    </div>
                   </button>
                 )}
                 {item.caption && (
@@ -368,11 +408,20 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           )}
         </div>
 
-        {/* ── Dot indicators ──────────────────────────────────── */}
+        {/* ── Pill-style active indicator (Apple.com style) ────── */}
         {items.length > 1 && (
-          <div className="flex justify-center gap-1.5 mt-4">
+          <div className="flex justify-center items-center gap-2 mt-4">
             {items.map((_, i) => (
-              <span key={i} className="w-1.5 h-1.5 rounded-full bg-charcoal/20" />
+              <button
+                key={i}
+                onClick={() => scrollToCard(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  activeIndex === i
+                    ? 'w-8 bg-charcoal/80'
+                    : 'w-4 bg-charcoal/20 hover:bg-charcoal/40'
+                }`}
+              />
             ))}
           </div>
         )}

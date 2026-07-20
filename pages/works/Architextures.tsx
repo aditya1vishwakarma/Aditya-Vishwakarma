@@ -1,7 +1,7 @@
 import React from 'react';
 import WritingLayout from '../../components/Writing/WritingLayout';
 import * as Prose from '../../components/Writing/Prose';
-const { Section, Lead, P, H2, H3, Bold, List, ListItem } = Prose;
+const { Section, Lead, P, H2, H3, Bold, List, ListItem, Img, MediaGallery, Divider } = Prose;
 
 const Architextures = () => {
   return (
@@ -25,6 +25,32 @@ const Architextures = () => {
         <P>
           Architextures is deliberately not a mood board. Pinterest is for collecting what other people made; the point with this app is to curate what <em>you</em> stood in front of. This distinction is what shaped the user experience. The app opens to a grid of photos you've added to it, and a persistent "+" button that opens the camera. Just in case though, can also import from your camera roll. This means that your library is most likely to be something you saw and chose to keep, not something you scrolled past and maybe saved. Much more intentional.
         </P>
+
+        <MediaGallery
+          bleed="wide"
+          items={[
+            {
+              type: 'image',
+              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Home%20Page.jpg',
+              alt: 'Screenshot of the Architextures home grid',
+              caption: "Current Home Page Layout.",
+            },
+            {
+              type: 'video',
+              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/rough%20prototype.mov',
+              alt: 'Demo walkthrough of adding a photo',
+              caption: 'Adding a photo, reviewing tags. Vision ONLY in this demo, as the CreateML model was broken at the time',
+            },
+            {
+              type: 'video',
+              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Info%20View.mov',
+              alt: 'Detail view of a saved building entry',
+              caption: 'Detail View Page... polish still needed!',
+            },
+          ]}
+          caption="Early Architextures demos."
+        />
+
         <H3>I went in with three goals in mind:</H3>
         <List type="numbered">
           <ListItem><Bold>Instant —</Bold> Tag suggestions should be instant and reliable.</ListItem>
@@ -83,6 +109,20 @@ const Architextures = () => {
         <P>
           Rather than talk about this in detail, I'll just post the workflow diagram of the data model, as it is, below:
         </P>
+        <Img
+          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/data%20flow.jpg"
+          alt="Workflow diagram showing how data flows through the user workflow"
+          bleed="full"
+          caption="How a photo flows through the app and gets tagged."
+        />
+        <Divider />
+        <Img
+          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/tag%20flow.jpg"
+          alt="High level data model"
+          bleed="full"
+          caption="High-level diagram of how data is grouped and stored."
+        />
+
         <P>
           Note: Design is my favorite part of building anything, so it took a lot of restraint for me to not start on this until I had the data model mostly set.
         </P>

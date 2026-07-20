@@ -16,10 +16,10 @@ interface OptimizedImageProps {
   height?: number | string;
 }
 
-const OptimizedImage: React.FC<OptimizedImageProps> = ({ 
-  src, 
-  alt, 
-  className = "", 
+const OptimizedImage: React.FC<OptimizedImageProps> = ({
+  src,
+  alt,
+  className = "",
   aspectRatio = "aspect-square",
   priority = false,
   srcSet,
@@ -40,11 +40,11 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             transition={{ duration: 0.6 }}
             className="absolute inset-0 z-10"
           >
-            <div 
-              className="absolute inset-0 animate-[shimmer_2s_infinite]" 
+            <div
+              className="absolute inset-0 animate-[shimmer_2s_infinite]"
               style={{
                 background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%)',
-              }} 
+              }}
             />
             <div className="w-full h-full bg-moss/5 backdrop-blur-xl" />
           </motion.div>
@@ -63,14 +63,14 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         onLoad={() => setIsLoaded(true)}
         onError={() => setError(true)}
         initial={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
-        animate={{ 
-          opacity: isLoaded ? 1 : 0, 
+        animate={{
+          opacity: isLoaded ? 1 : 0,
           scale: isLoaded ? 1 : 1.05,
           filter: isLoaded ? 'blur(0px)' : 'blur(10px)'
         }}
-        transition={{ 
-          duration: 0.8, 
-          ease: [0.16, 1, 0.3, 1] 
+        transition={{
+          duration: 0.8,
+          ease: [0.16, 1, 0.3, 1]
         }}
         className={`w-full h-full object-cover ${className}`}
       />

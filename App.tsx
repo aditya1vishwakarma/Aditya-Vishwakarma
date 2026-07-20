@@ -18,6 +18,7 @@ import DJXProject from './pages/works/DJXProject';
 import Architextures from './pages/works/Architextures';
 import SpacialMusic from './pages/works/SpacialMusic';
 import PhotoCaptions from './pages/works/PhotoCaptions';
+import AMDesktopRed from './pages/works/AMDesktopRed';
 
 const { HashRouter, Routes, Route, useLocation } = ReactRouterDOM as any;
 
@@ -70,6 +71,7 @@ const App: React.FC = () => {
           <Route path="/works/architextures" element={<Architextures />} />
           <Route path="/works/SpacialMusic" element={<SpacialMusic />} />
           <Route path="/works/photo-captions" element={<PhotoCaptions />} />
+          <Route path="/works/AMDesktopRed" element={<AMDesktopRed />} />
 
           {/* Blog Routes */}
           <Route path="/blog/curation" element={<Curation />} />
