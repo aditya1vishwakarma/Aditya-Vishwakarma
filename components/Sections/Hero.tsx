@@ -33,6 +33,45 @@ const MOVE_EPS = 0.4;     // px/ms floor, so a resting finger accrues nothing
 const HIT_PADDING = 15;   // grab forgiveness around the visible circle
 const DESKTOP_REVEAL_DIST = 1600;
 
+// Mobile gallery geometry, all in px, mirroring the classes on the grid below. The row
+// count is computed from these rather than fixed, so the viewport decides how many photos
+// fit — a short phone drops a row instead of squashing cells, a tall one gains one — and
+// neither the grid nor the hero ever needs scrolling.
+const GRID_COLS = 4;         // grid-cols-4
+const GRID_GAP = 2;          // gap-0.5
+const GRID_PAD = 8;          // p-2 on the wrapper
+const GRID_BOTTOM_PAD = 24;  // guaranteed breathing room under the last row
+const GRID_MIN_ROWS = 3;     // below this it stops reading as a gallery; max-h-full absorbs
+                             // the remainder on a viewport too short even for that.
+
+/**
+ * How many 4-across rows of square photos fit above the fold.
+ *
+ * Height comes from 100svh — the viewport at its *shortest*, with the URL bar showing —
+ * rather than the live height, so the count can't flip back and forth as the bar retracts.
+ * The extra room when it does retract simply becomes slack at the bottom.
+ *
+ * headerH is passed in measured rather than assumed: the caption wraps to three lines below
+ * ~375px and two above, an 23px swing that a single constant gets wrong at one end or the
+ * other — costing a row on big phones or overflowing on small ones.
+ */
+const mobileGridRows = (headerH: number, maxRows: number): number => {
+  if (typeof window === 'undefined') return GRID_MIN_ROWS;
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  // Falls back to innerHeight if svh isn't supported: the declaration is dropped, leaving
+  // an empty div at height 0.
+  const shortest = probe.getBoundingClientRect().height || window.innerHeight;
+  probe.remove();
+
+  const cell = (window.innerWidth - GRID_PAD * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+  const avail = shortest - headerH - GRID_PAD * 2 - GRID_BOTTOM_PAD;
+  // n rows span n*cell + (n-1)*gap.
+  const fits = Math.floor((avail + GRID_GAP) / (cell + GRID_GAP));
+  return Math.max(GRID_MIN_ROWS, Math.min(maxRows, fits));
+};
+
 type Circle = { r: number; x: number; y: number };
 
 const Hero: React.FC = () => {
@@ -40,10 +79,12 @@ const Hero: React.FC = () => {
   const [showRevealButton, setShowRevealButton] = useState(false);
   const [isFullyRevealed, setIsFullyRevealed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [gridRows, setGridRows] = useState(GRID_MIN_ROWS);
   // Ripple animation (commented out for now)
   // const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
   // const mobileTapCount = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // 1. MOTION VALUES
   // Initialize cursor window relative to viewport size (85% width, 25% height)
@@ -250,7 +291,9 @@ const Hero: React.FC = () => {
   const clampToHero = (x: number, y: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
     const w = rect?.width ?? window.innerWidth;
-    const h = rect?.height ?? window.innerHeight;
+    // The section overshoots the viewport on mobile so its sheet covers the strip behind
+    // the URL bar. Clamp to whichever is shorter, or the blob can be parked in there.
+    const h = Math.min(rect?.height ?? window.innerHeight, window.innerHeight);
     const m = radii.current.main * 0.4;
     return { x: Math.max(m, Math.min(w - m, x)), y: Math.max(m, Math.min(h - m, y)) };
   };
@@ -353,13 +396,13 @@ const Hero: React.FC = () => {
   ];
 
   // Where the blob sits before anyone has touched it. On mobile that's the empty upper
-  // area, clear of the name block at ~75%.
+  // area, clear of the name block at ~75%, lifted 20px to open up the gap below it.
   // Horizontally it's anchored not by its centre but by the point halfway between the
   // centre and the middle of its right edge (centre + r/2). That anchor lands on the 75%
   // mark — midway between screen centre and the right edge — which reads as sitting to the
   // right without the circle's edge crowding the screen border.
   const restPosition = (mobile: boolean) => mobile
-    ? { x: window.innerWidth * 0.75 - radii.current.main / 2, y: window.innerHeight * 0.34 }
+    ? { x: window.innerWidth * 0.75 - radii.current.main / 2, y: window.innerHeight * 0.34 - 20 }
     : { x: window.innerWidth * 0.745, y: window.innerHeight * 0.265 };
 
   // jump() moves a spring without animating, so repositioning never shows a swoop.
@@ -403,6 +446,29 @@ const Hero: React.FC = () => {
     return () => {
       window.removeEventListener('resize', syncViewport);
       motionQuery.removeEventListener('change', syncMotion);
+    };
+  }, []);
+
+  // How many rows of photos the viewport can hold. Driven off the header's measured height
+  // via a ResizeObserver, which also covers the case that's easy to miss: the caption
+  // re-wrapping to a third line on a rotate or a narrow window, which costs a whole row.
+  // Registered after the viewport effect above so isMobileRef is current when a resize
+  // fires both.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const recompute = () => {
+      if (!isMobileRef.current) return;
+      const h = el.getBoundingClientRect().height;
+      setGridRows(mobileGridRows(h, Math.floor(images.length / GRID_COLS)));
+    };
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+    window.addEventListener('resize', recompute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', recompute);
     };
   }, []);
 
@@ -497,19 +563,26 @@ const Hero: React.FC = () => {
     <>
       <div className="absolute inset-0 bg-[#FBFAF8]" />
       <div className="relative h-full w-full">
-        {/* Scroll Indicator - Bottom Middle */}
-        <div className={`absolute left-1/2 -translate-x-1/2 text-charcoal/20 ${isMobile ? 'bottom-7' : 'bottom-[28px]'}`}>
+        {/* Scroll Indicator - Bottom Middle.
+            The sheet now runs to lvh, so on mobile "bottom" is below the URL bar. Offsetting
+            by (sheet height − dvh) puts the chevron back on the bottom edge of what's
+            actually visible, and collapses to a plain 28px once the bar retracts. */}
+        <div className={`absolute left-1/2 -translate-x-1/2 text-charcoal/20 ${isMobile ? 'bottom-[calc(100%_-_100dvh_+_1.75rem)]' : 'bottom-[28px]'}`}>
           <ChevronDown size={32} strokeWidth={1.5} />
         </div>
 
         {isMobile ? (
-          <div className="absolute inset-0 flex flex-col justify-center items-start text-left px-6">
-            {/* Name + kicker share one shrink-to-fit column, so the column's width is set by
-                the widest line ("Vishwakarma") and the right-aligned kicker lands on its end
-                rather than on the screen margin.
+          /* Anchored to dvh, not to the sheet: the sheet overshoots to lvh to cover the
+             strip behind the URL bar, and centring in that box would push the name down
+             out of sight whenever the bar is showing. */
+          <div className="absolute inset-x-0 top-0 h-dvh flex flex-col justify-center items-start text-left px-6">
+            {/* Name + kicker share one shrink-to-fit column set by the widest line
+                ("Vishwakarma"), both flush to its left edge.
                 translate-y offsets the group down from the container's vertical centre so the
-                name sits ~75% down the viewport, kicker trailing below it. */}
-            <div className="flex flex-col translate-y-[23vh]">
+                name sits ~75% down the viewport, kicker trailing below it. dvh, not vh: vh is
+                the URL-bar-hidden height, which would drop the group too far while the bar
+                is up — the container centres on dvh, so the offset has to as well. */}
+            <div className="flex flex-col translate-y-[23dvh]">
               {/* Oversized statement name - stacked, near-bleed to the right margin */}
               <h1 className="font-serif font-normal text-charcoal leading-[0.9] tracking-[-0.03em] text-[clamp(2.75rem,15vw,7rem)]">
                 <span className="block">Aditya</span>
@@ -517,10 +590,9 @@ const Hero: React.FC = () => {
               </h1>
 
               {/* Role kicker - Nimbus Sans, matches desktop family.
-                  Right-aligned against the left-aligned name for deliberate asymmetry.
-                  -mr cancels the trailing letter-spacing so the last glyph, not the text box,
-                  lines up with the end of "Vishwakarma". */}
-              <div className="mt-7 text-right -mr-[0.18em] font-sans uppercase text-charcoal/50 tracking-[0.18em] text-[13px] leading-[1.9]">
+                  Left-aligned, sharing the name's left edge. Tracking only adds space to the
+                  right of each glyph, so no margin correction is needed on this side. */}
+              <div className="mt-7 text-left font-sans uppercase text-charcoal/50 tracking-[0.18em] text-[13px] leading-[1.9]">
                 <span className="block">Product Manager</span>
                 <span className="block">Based in San Francisco</span>
               </div>
@@ -554,40 +626,55 @@ const Hero: React.FC = () => {
     <section
       ref={containerRef}
       /* h-dvh, not h-screen: iOS reports 100vh as the height with the URL bar hidden, so
-         the hero overflowed and the chevron sat below the fold on first paint. */
-      className={`relative h-dvh w-full flex flex-col justify-center items-center overflow-hidden bg-[#D4DCDA] ${!isMobile && isHovered && !isFullyRevealed && selectedImageIndex === null ? 'cursor-none' : ''}`}
+         the hero overflowed and the chevron sat below the fold on first paint.
+         On phones dvh alone still leaves a gap — it shrinks back to the URL-bar-visible
+         height, and the top of About shows through the strip behind the bar. lvh is the
+         tallest the viewport ever gets, so the sheet always reaches the true bottom edge.
+         It's a min-height, not a height, so a browser without lvh just keeps the dvh box.
+         Everything inside that needs to stay on screen is measured against dvh instead. */
+      className={`relative h-dvh max-[600px]:min-h-[100lvh] w-full flex flex-col justify-center items-center overflow-hidden bg-[#D4DCDA] ${!isMobile && isHovered && !isFullyRevealed && selectedImageIndex === null ? 'cursor-none' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* LAYER 1: BOTTOM GALLERY (Apple Photos Style) */}
       {/* On mobile the header + grid center as one group so the caption sits just above
            the photos instead of being pinned to the top of the viewport. */}
-      <div className={`absolute inset-0 z-0 flex flex-col ${isMobile ? 'justify-center' : ''}`}>
-        {/* HEADER BAR */}
-        <AnimatePresence>
-          {isFullyRevealed && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className={`w-full z-20 pointer-events-auto flex justify-between items-center gap-3 ${isMobile ? 'px-5 pb-4' : 'pt-10 pl-4 md:pl-10 pr-10 pb-4'}`}
-            >
+      <div className={`absolute z-0 flex flex-col ${isMobile ? 'inset-x-0 top-0 h-dvh justify-center' : 'inset-0'}`}>
+        {/* HEADER BAR — mounted at all times, not just once revealed. It's what the row
+             count is measured from, and reserving its space up front means the grid no
+             longer jumps down when the gallery opens. Invisible and inert until then. */}
+        <motion.div
+          ref={headerRef}
+          initial={false}
+          animate={{ opacity: isFullyRevealed ? 1 : 0, y: isFullyRevealed ? 0 : -10 }}
+          aria-hidden={!isFullyRevealed}
+          className={`w-full z-20 flex justify-between items-center gap-3 ${isFullyRevealed ? 'pointer-events-auto' : 'pointer-events-none'} ${isMobile ? 'px-5 pb-4' : 'pt-10 pl-4 md:pl-10 pr-10 pb-4'}`}
+        >
               <p className={`font-serif text-charcoal/80 max-w-[70%] ${isMobile ? 'text-[17px] leading-snug' : 'text-xl md:text-2xl leading-none transform translate-y-[2px]'}`}>
                 {isMobile ? "I'm also a hobbyist photographer, here are some of my favorites!" : "I'm also a hobbyist photographer, here are some of my favorites!"}
               </p>
 
               <motion.button
                 onClick={handleHide}
+                tabIndex={isFullyRevealed ? 0 : -1}
                 className={`bg-moss text-white rounded-full font-sans tracking-[0.1em] uppercase hover:bg-charcoal transition-all active:scale-95 shrink-0 ${isMobile ? 'inline-flex items-center justify-center min-h-[44px] px-5 text-[11px] shadow-lg' : 'w-[140px] py-3 text-sm shadow-2xl'}`}
               >
                 Hide
               </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </motion.div>
 
-        {/* PHOTO GRID - 4x8 on desktop, 4x5 on mobile (no overflow) */}
+        {/* PHOTO GRID - 4x8 on desktop; on mobile the viewport picks the row count.
+             The aspect ratio has to track that count for the cells to stay square, and
+             Tailwind can't emit a class for a runtime value, so mobile sets it inline and
+             the classes cover the widths where the count is static. max-h-full stays as a
+             backstop: if a viewport is too short even for GRID_MIN_ROWS, the grid gives up
+             square cells rather than pushing the hero into a scroll. */}
         <div className={`w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isMobile ? '' : 'flex-1'} ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full max-h-full aspect-[4/5] md:aspect-[2/1]">
-            {(isMobile ? images.slice(0, 20) : images).map((img, i) => (
+          <div
+            className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full max-h-full aspect-[4/6] md:aspect-[2/1]"
+            style={isMobile ? { aspectRatio: `${GRID_COLS} / ${gridRows}` } : undefined}
+          >
+            {(isMobile ? images.slice(0, gridRows * GRID_COLS) : images).map((img, i) => (
               <motion.div
                 key={i}
                 whileHover={{ scale: 1.05, zIndex: 10, transition: { duration: 0.2 } }}
