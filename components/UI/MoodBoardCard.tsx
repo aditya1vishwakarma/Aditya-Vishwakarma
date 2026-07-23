@@ -13,6 +13,13 @@ interface MoodBoardCardProps {
    * Requires <GlassRefractionFilter /> mounted once on the page.
    */
   refractive?: boolean;
+  /**
+   * Intrinsic width/height of the image, when it's already known. Reserves the
+   * image's box up front so a card in a scrolling list has its real height before
+   * the bytes land — an unsized `height: auto` image is zero-height, which
+   * collapses the list and takes its scroll range with it.
+   */
+  aspectRatio?: number;
 }
 
 // Soft, layered drop shadow (Apple-esque). Lives on the Squircle's outer
@@ -22,8 +29,16 @@ const CARD_SHADOW =
 
 // Specular edge — a bright inner rim + a top highlight so the pane catches
 // light like a bevelled glass edge (the strongest "it's glass" cue).
-const GLASS_EDGE =
+// Exported so anything floating alongside a card (e.g. the tap view's close chip)
+// is cut from the same glass instead of re-deriving the recipe.
+export const GLASS_EDGE =
   'inset 0 1px 1px rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 -12px 26px -20px rgba(0,0,0,0.22)';
+
+/** Dark tint — used when the card sits on a dark scrim and its text is white. */
+export const GLASS_TINT_DARK = 'rgba(138, 138, 143, 0.42)';
+
+/** blur = frost thickness, saturate = glassy vividness of the backdrop. */
+export const GLASS_BACKDROP = 'blur(14px) saturate(1.8)';
 
 // Fine fractal-noise grain, tiled — the "frost" scatter. Rendered at 7% opacity.
 const FROST_NOISE =
@@ -49,6 +64,7 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({
   isPopup = false,
   whiteText = false,
   refractive = false,
+  aspectRatio,
 }) => {
   return (
     <Squircle
@@ -60,10 +76,9 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({
         padding: '12px',
         // Dark, lower-opacity gray glass for the tap preview (white text over a
         // dark scrim); light cream for the in-page cards (dark text, light page).
-        background: whiteText ? 'rgba(138, 138, 143, 0.42)' : 'rgba(251, 250, 248, 0.60)',
-        // blur = frost thickness, saturate = glassy vividness of the backdrop.
-        backdropFilter: 'blur(14px) saturate(1.8)',
-        WebkitBackdropFilter: 'blur(14px) saturate(1.8)',
+        background: whiteText ? GLASS_TINT_DARK : 'rgba(251, 250, 248, 0.60)',
+        backdropFilter: GLASS_BACKDROP,
+        WebkitBackdropFilter: GLASS_BACKDROP,
         boxShadow: GLASS_EDGE,
       }}
       onClick={(e: React.MouseEvent) => {
@@ -92,6 +107,7 @@ const MoodBoardCard: React.FC<MoodBoardCardProps> = ({
               loading={isPopup ? 'eager' : 'lazy'}
               decoding="async"
               className={`w-full h-auto object-cover block ${isPopup ? 'max-h-[70vh]' : ''}`}
+              style={aspectRatio ? { aspectRatio } : undefined}
             />
           </Squircle>
         </div>

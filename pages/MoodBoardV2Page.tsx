@@ -6,11 +6,21 @@ import { motion as motionComponent, AnimatePresence, useSpring, useTransform } f
 import * as ReactRouterDOM from 'react-router-dom';
 import { MOOD_BOARD } from '../constants';
 import type { MoodBoardItem } from '../types';
-import MoodBoardCard, { GlassRefractionFilter } from '../components/UI/MoodBoardCard';
+import MoodBoardCard, {
+  GlassRefractionFilter,
+  GLASS_EDGE,
+  GLASS_TINT_DARK,
+  GLASS_BACKDROP,
+} from '../components/UI/MoodBoardCard';
 import Squircle from '../components/UI/Squircle';
 
 const { Link } = ReactRouterDOM as any;
 const motion = motionComponent as any;
+
+// This page paints its own cream. It also has to be the *canvas* colour while the
+// page is open — Safari extends the canvas behind its chrome, and the fixed layer
+// below can't reach there.
+const PAGE_BG = '#FBFCF6';
 
 /* ─────────────────────────────────────────────
  * Pre-load all images & create THREE.Textures
@@ -137,6 +147,72 @@ function usePreloadTextures(items: MoodBoardItem[]) {
 
   return { textures, loadedCount, total };
 }
+
+/* ─────────────────────────────────────────────
+ * Pre-load every board image and record its intrinsic aspect ratio.
+ * This is the mobile counterpart to the texture preloader above — the grid
+ * needs pixels and dimensions, not GPU textures.
+ *
+ * The ratios matter as much as the bytes. An <img> with `height: auto` and no
+ * declared ratio contributes ZERO height until its bytes land, so a column of
+ * not-yet-loaded tiles collapses the scroll container to nothing — and a
+ * container with no scroll range can never bring the next lazy image into view
+ * to load it. That deadlock is why the grid went dead after the tap view
+ * remounted it: every <img> restarted at zero height at once.
+ *
+ * Plain <img> loads rather than fetch(), so this rides the browser cache
+ * instead of bypassing it the way the WebGL path has to.
+ * ───────────────────────────────────────────── */
+function usePreloadImages(items: MoodBoardItem[]) {
+  const [ratios, setRatios] = useState<Map<string, number>>(new Map());
+  const [loadedCount, setLoadedCount] = useState(0);
+  // Holding the elements keeps the decoded bitmaps warm for the page's lifetime.
+  const keepAliveRef = useRef<HTMLImageElement[]>([]);
+  const total = items.length;
+
+  useEffect(() => {
+    if (total === 0) return;
+    let cancelled = false;
+    const map = new Map<string, number>();
+    let count = 0;
+
+    const settle = () => {
+      if (cancelled) return;
+      count++;
+      setLoadedCount(count);
+      setRatios(new Map(map));
+    };
+
+    items.forEach((item) => {
+      const img = new Image();
+      keepAliveRef.current.push(img);
+      img.decoding = 'async';
+      img.onload = () => {
+        if (img.naturalWidth && img.naturalHeight) {
+          map.set(item.imageUrl, img.naturalWidth / img.naturalHeight);
+        }
+        settle();
+      };
+      // A broken URL counts as settled — one 404 must never wedge the loader.
+      img.onerror = settle;
+      img.src = item.imageUrl;
+    });
+
+    return () => {
+      cancelled = true;
+      keepAliveRef.current = [];
+    };
+  }, [total]); // items is a module constant; length is a sufficient identity
+
+  return { ratios, loadedCount, total };
+}
+
+/**
+ * Box to reserve for an image. Falls back to the coarse orientation in the data
+ * until (or if) a real measurement arrives — anything is better than zero.
+ */
+const ratioFor = (item: MoodBoardItem, ratios: Map<string, number>) =>
+  ratios.get(item.imageUrl) ?? (item.orientation === 'portrait' ? 3 / 4 : 4 / 3);
 
 /* ─────────────────────────────────────────────
  * Pane — receives a pre-created texture (or null)
@@ -321,17 +397,22 @@ const TopDownCamera: React.FC = () => {
  * Page — orchestrates loading → scene
  * ───────────────────────────────────────────── */
 const MoodBoardV2Page: React.FC = () => {
-  // Detect mobile once on mount. The 3D ring is disabled on mobile, so there's
-  // no need to preload textures there — doing so would block the loading overlay
-  // (and therefore grid scrolling) until every image fetch completes.
+  // Detect mobile once on mount. Each platform preloads what it actually renders:
+  // desktop needs GPU textures for the ring, mobile needs decoded images and their
+  // dimensions for the grid. Only one of the two ever runs.
   const [isMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   );
 
-  const { textures, loadedCount, total } = usePreloadTextures(isMobile ? [] : MOOD_BOARD);
+  const texturePreload = usePreloadTextures(isMobile ? [] : MOOD_BOARD);
+  const imagePreload = usePreloadImages(isMobile ? MOOD_BOARD : []);
+
+  const { textures } = texturePreload;
+  const { ratios } = imagePreload;
+  const { loadedCount, total } = isMobile ? imagePreload : texturePreload;
   const progress = total > 0 ? (loadedCount / total) * 100 : 100;
 
-  const [isReady, setIsReady] = useState(() => isMobile);
+  const [isReady, setIsReady] = useState(false);
   const [speed, setSpeed] = useState(0.05);
   const [selectedItem, setSelectedItem] = useState<MoodBoardItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<MoodBoardItem | null>(null);
@@ -346,15 +427,61 @@ const MoodBoardV2Page: React.FC = () => {
   // Smooth the progress for the loading bar
   const animatedProgress = useSpring(progress, { stiffness: 50, damping: 20 });
 
-  // When loading completes, wait a beat then reveal. On mobile we're already
-  // ready (no texture preload), so skip the overlay entirely.
+  // When loading completes, wait a beat then reveal.
   useEffect(() => {
-    if (isMobile) return;
     if (progress >= 100) {
-      const timer = setTimeout(() => setIsReady(true), 800);
+      const timer = setTimeout(() => setIsReady(true), isMobile ? 400 : 800);
       return () => clearTimeout(timer);
     }
+    // Stall guard: this effect re-arms on every tick of progress, so the timer only
+    // fires if loading goes quiet for 8s. A hung request can't trap the page behind
+    // the loader — and thanks to the reserved ratio boxes, revealing mid-load still
+    // gives a correctly-sized, fully scrollable grid.
+    const bail = setTimeout(() => setIsReady(true), 8000);
+    return () => clearTimeout(bail);
   }, [progress, isMobile]);
+
+  /* ─── Edge-to-edge, scoped to this page ───────────────────────
+   * Two things have to be true for the board to fill the screen in mobile Safari:
+   *
+   *   1. viewport-fit=cover, or Safari insets the page above the status bar and below
+   *      the toolbar — the two bands framing the content.
+   *   2. The document canvas has to be this page's cream. Safari extends the canvas
+   *      colour behind its chrome, and a `fixed` layer can never paint up there.
+   *
+   * Both are document-level, and the rest of the site doesn't want either — so they're
+   * applied on mount and fully reverted on unmount rather than living in index.html.
+   * Safari doesn't always re-evaluate viewport-fit on a live meta change; when it
+   * doesn't, (2) still lands, so the strips take the page's cream and read seamless.
+   * The fallback is a flat page, never the two-tone bands.
+   * ───────────────────────────────────────────── */
+  useEffect(() => {
+    const html = document.documentElement;
+    const viewport = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    const prevViewport = viewport?.content;
+    const prevHtmlBg = html.style.backgroundColor;
+
+    // The site has no theme-color tag — add one for this page and take it away after.
+    let theme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    const themeIsOurs = !theme;
+    const prevTheme = theme?.content;
+    if (!theme) {
+      theme = document.createElement('meta');
+      theme.name = 'theme-color';
+      document.head.appendChild(theme);
+    }
+
+    if (viewport) viewport.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+    theme.content = PAGE_BG;
+    html.style.backgroundColor = PAGE_BG;
+
+    return () => {
+      if (viewport && prevViewport !== undefined) viewport.content = prevViewport;
+      if (themeIsOurs) theme?.remove();
+      else if (theme && prevTheme !== undefined) theme.content = prevTheme;
+      html.style.backgroundColor = prevHtmlBg;
+    };
+  }, []);
 
   const handleSelectItem = useCallback((item: MoodBoardItem | null) => {
     setSelectedItem(item);
@@ -370,8 +497,16 @@ const MoodBoardV2Page: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen overflow-hidden select-none"
-      style={{ background: '#FBFCF6' }}
+      className="fixed inset-0 w-screen overflow-hidden select-none"
+      style={{
+        background: PAGE_BG,
+        // Full-bleed: 100lvh is the viewport with Safari's chrome collapsed, so the
+        // layer stays edge to edge (content runs under the bars) instead of resizing
+        // as the toolbar shows and hides. h-screen would have been over-constrained
+        // against inset-0 anyway.
+        height: '100vh',
+        minHeight: '100lvh',
+      }}
       onMouseMove={handleMouseMove}
     >
       {/* SVG displacement filter for glass refraction (mounted once). */}
@@ -410,7 +545,9 @@ const MoodBoardV2Page: React.FC = () => {
       </AnimatePresence>
 
       {/* ──── TOP BAR ──── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex flex-row items-start md:items-center justify-between px-5 md:px-8 py-5 md:py-6 pointer-events-none gap-4">
+      {/* Steps aside while the tap view is open — its close chip takes the Home pill's
+          slot, and two chips stacked in one corner reads as clutter. */}
+      <div className={`fixed top-0 left-0 right-0 z-50 flex flex-row items-start md:items-center justify-between px-5 md:px-8 pb-5 md:pb-6 pt-[calc(1.25rem_+_env(safe-area-inset-top))] md:pt-[calc(1.5rem_+_env(safe-area-inset-top))] pointer-events-none gap-4 transition-opacity duration-300 ${expandedItem ? 'opacity-0' : 'opacity-100'}`}>
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pointer-events-auto">
 
           {/* Mobile Layout Toggle — masonry image grid vs. single list.
@@ -534,7 +671,7 @@ const MoodBoardV2Page: React.FC = () => {
       )}
 
       {viewMode === 'grid' && (
-        <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[120px] md:pt-[140px] pb-24 pointer-events-auto">
+        <div className="absolute inset-0 w-full h-full overflow-y-auto pointer-events-auto pt-[calc(120px_+_env(safe-area-inset-top))] md:pt-[calc(140px_+_env(safe-area-inset-top))] pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
 
           {/* ── MOBILE: 2-column masonry of images only (tap to expand) ──
               Built as two explicit flex columns (top-aligned) rather than CSS
@@ -562,9 +699,14 @@ const MoodBoardV2Page: React.FC = () => {
                         <img
                           src={item.imageUrl}
                           alt={item.title}
+                          // Still lazy — 37 tiles is a lot to hold decoded at once — but
+                          // the reserved ratio means the column is its full height from
+                          // the first frame, so there's always somewhere to scroll to.
+                          // The preload has the bytes cached by the time you get here.
                           loading="lazy"
                           decoding="async"
                           className="w-full h-auto object-cover block"
+                          style={{ aspectRatio: ratioFor(item, ratios) }}
                         />
                       </Squircle>
                     </button>
@@ -579,7 +721,9 @@ const MoodBoardV2Page: React.FC = () => {
             <div className="md:hidden px-6">
               {gridItems.map((item) => (
                 <div key={item.id} className="w-full mb-6">
-                  <MoodBoardCard item={item} />
+                  {/* Same reserved box as the masonry — this list is the layout that
+                      collapsed hardest, since every card is a full-width image. */}
+                  <MoodBoardCard item={item} aspectRatio={ratioFor(item, ratios)} />
                 </div>
               ))}
             </div>
@@ -656,7 +800,7 @@ const MoodBoardV2Page: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '10%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 340, damping: 38 }}
-            className="fixed bottom-6 left-6 z-40 w-[90vw] md:w-[420px]"
+            className="fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-6 z-40 w-[90vw] md:w-[420px]"
           >
             <MoodBoardCard item={selectedItem} isPopup={true} />
           </motion.div>
@@ -666,28 +810,78 @@ const MoodBoardV2Page: React.FC = () => {
       {/* ──── MOBILE EXPANDED IMAGE (tap masonry to expand) ──── */}
       <AnimatePresence>
         {expandedItem && (
+          /* No opacity animation anywhere above the card: an ancestor at opacity < 1
+             makes the card's backdrop-filter sample a backdrop that isn't composited
+             yet, so on iOS the glass paints near-white and only snaps to grey once the
+             fade lands — the two-step load. The scrim is a *sibling* instead, and it
+             appears at full strength on the first frame, so the glass is correct
+             immediately. */
           <motion.div
             key="mobile-expanded"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-0 z-[120] overflow-y-auto md:hidden"
             onClick={() => setExpandedItem(null)}
-            style={{
-              // Darker, only lightly-blurred scrim: the grid stays visible
-              // behind the expanded card but recedes so the pane reads clearly.
-              background: 'rgba(22, 20, 17, 0.42)',
-              backdropFilter: 'blur(2px)',
-              WebkitBackdropFilter: 'blur(2px)',
-            }}
+            // Keeps a drag inside the preview from chaining into the grid underneath,
+            // so closing it returns you exactly where you left off.
+            style={{ overscrollBehavior: 'contain' }}
           >
+            {/* Darker, only lightly-blurred scrim: the grid stays visible behind the
+                expanded card but recedes so the pane reads clearly. Fades on exit only. */}
+            <motion.div
+              aria-hidden="true"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="fixed inset-0 z-0 pointer-events-none"
+              style={{
+                background: 'rgba(22, 20, 17, 0.42)',
+                backdropFilter: 'blur(2px)',
+                WebkitBackdropFilter: 'blur(2px)',
+              }}
+            />
+
+            {/* Close chip — fixed to the viewport rather than pinned to the card, so a
+                tall card that scrolls past the top of the screen (leaving no scrim to
+                tap) can still be dismissed. Same glass as the card it closes. Scale-only
+                entrance: an opacity animation would cost it its backdrop on the first
+                frame, exactly like the card. */}
+            <motion.button
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedItem(null); }}
+              aria-label="Close"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              // whileTap, not active:scale-95 — Framer owns this element's transform,
+              // so a Tailwind scale utility would never land.
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+              className="fixed z-20 right-5 flex items-center justify-center h-10 w-10 text-white"
+              style={{
+                top: 'calc(1.25rem + env(safe-area-inset-top))',
+                borderRadius: 13,
+                background: GLASS_TINT_DARK,
+                backdropFilter: GLASS_BACKDROP,
+                WebkitBackdropFilter: GLASS_BACKDROP,
+                boxShadow: GLASS_EDGE,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </motion.button>
+
             {/* Scroll happens on the padded backdrop so the card's shadow
                 isn't clipped and tall images never hard-cut at the top. */}
-            <div className="min-h-full flex items-center justify-center p-6">
+            <div
+              className="relative z-10 min-h-full flex items-center justify-center px-6"
+              style={{
+                paddingTop: 'calc(1.5rem + env(safe-area-inset-top))',
+                paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+              }}
+            >
               <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 28 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
+                initial={{ scale: 0.9, y: 28 }}
+                animate={{ scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.94, y: 16 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 34 }}
                 className="w-full max-w-[430px]"
@@ -707,7 +901,7 @@ const MoodBoardV2Page: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed bottom-8 left-8 pointer-events-none z-20"
+            className="fixed bottom-[calc(2rem_+_env(safe-area-inset-bottom))] left-8 pointer-events-none z-20"
           >
             <span className="text-[9px] uppercase tracking-[0.5em] text-charcoal/20 font-semibold">
               Click or Hover!

@@ -135,6 +135,14 @@ const Hero: React.FC = () => {
   // Single per-frame write, so the mask and the invisible hit target can never
   // disagree about where the circle is.
   const lastHitSize = useRef(0);
+
+  // The hit element unmounts on reveal and a brand new one mounts on hide, with no inline
+  // size on it. Clearing the cache as it attaches forces the next frame to write width and
+  // height again — otherwise the replacement stays 0x0 and silently eats every gesture.
+  const setHitRef = (el: HTMLDivElement | null) => {
+    hitRef.current = el;
+    lastHitSize.current = 0;
+  };
   useAnimationFrame((time, delta) => {
     const currentX = mouseX.get();
     const currentY = mouseY.get();
@@ -290,6 +298,19 @@ const Hero: React.FC = () => {
     lastTouchAt.current = performance.now();
   };
 
+  // Touch events are captured by whatever element received touchstart — but the dissolve
+  // fires mid-drag and unmounts that element, so its touchend never arrives and the drag
+  // would stay flagged active forever. Watching the window guarantees a release always
+  // lands somewhere, leaving the gesture ready to start over.
+  useEffect(() => {
+    window.addEventListener('touchend', handleCircleTouchEnd);
+    window.addEventListener('touchcancel', handleCircleTouchEnd);
+    return () => {
+      window.removeEventListener('touchend', handleCircleTouchEnd);
+      window.removeEventListener('touchcancel', handleCircleTouchEnd);
+    };
+  }, []);
+
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
 
@@ -333,8 +354,12 @@ const Hero: React.FC = () => {
 
   // Where the blob sits before anyone has touched it. On mobile that's the empty upper
   // area, clear of the name block at ~75%.
+  // Horizontally it's anchored not by its centre but by the point halfway between the
+  // centre and the middle of its right edge (centre + r/2). That anchor lands on the 75%
+  // mark — midway between screen centre and the right edge — which reads as sitting to the
+  // right without the circle's edge crowding the screen border.
   const restPosition = (mobile: boolean) => mobile
-    ? { x: window.innerWidth * 0.5, y: window.innerHeight * 0.34 }
+    ? { x: window.innerWidth * 0.75 - radii.current.main / 2, y: window.innerHeight * 0.34 }
     : { x: window.innerWidth * 0.745, y: window.innerHeight * 0.265 };
 
   // jump() moves a spring without animating, so repositioning never shows a swoop.
@@ -665,7 +690,7 @@ const Hero: React.FC = () => {
            Rendered at all widths: touchscreen laptops are real. */}
       {!isFullyRevealed && (
         <div
-          ref={hitRef}
+          ref={setHitRef}
           onTouchStart={handleCircleTouchStart}
           onTouchMove={handleCircleTouchMove}
           onTouchEnd={handleCircleTouchEnd}
