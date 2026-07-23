@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hero mask / touch test</title>
+<style>
+  :root { --ink:#2b2b2b; --moss:#4a6b2a; --paper:#FBFAF8; }
+  * { box-sizing:border-box; -webkit-text-size-adjust:100%; }
+  body { margin:0; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+         color:var(--ink); background:#e7ebe9; padding:16px 16px 96px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  h2 { font-size:15px; margin:28px 0 6px; }
+  p.note { margin:4px 0 10px; color:#555; font-size:12.5px; }
+  .card { background:#fff; border-radius:12px; padding:12px; margin-bottom:12px; }
+  code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td,th { text-align:left; padding:3px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+  th { color:#666; font-weight:600; }
+  .ok { color:#2f7d32; font-weight:600; }
+  .bad { color:#b3261e; font-weight:600; }
+  button { font:inherit; padding:11px 14px; min-height:44px; border:0; border-radius:999px;
+           background:var(--moss); color:#fff; margin:3px 3px 3px 0; }
+  button.sec { background:#5a5f5c; }
+  .panel { position:relative; width:100%; height:150px; border-radius:10px; overflow:hidden; margin-top:6px; }
+  .backdrop { position:absolute; inset:0; display:grid; grid-template-columns:repeat(4,1fr);
+              grid-template-rows:repeat(3,1fr); gap:2px; }
+  .tile { background:linear-gradient(135deg,#3b7ea1,#7fb069); }
+  .tile:nth-child(2n){ background:linear-gradient(135deg,#c96b3f,#e0b25e); }
+  .tile:nth-child(3n){ background:linear-gradient(135deg,#5c5470,#9a8fb5); }
+  .sheet { position:absolute; inset:0; background:var(--paper); }
+  .sheet-label { position:absolute; left:10px; bottom:8px; font-size:12px; color:#999; }
+  /* Perf stage */
+  #stage { position:fixed; inset:0; z-index:50; display:none; }
+  #stage.on { display:block; }
+  #stageBar { position:fixed; z-index:60; left:0; right:0; bottom:0; padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+              background:rgba(20,20,20,.86); color:#fff; display:none; align-items:center; justify-content:space-between; gap:10px; }
+  #stageBar.on { display:flex; }
+  #fpsLive { font-family:ui-monospace,monospace; font-size:13px; }
+  /* Test C */
+  #dragStage { position:relative; width:100%; height:62vh; border-radius:12px; overflow:hidden; touch-action:pan-y; }
+  #hit { position:absolute; top:0; left:0; border-radius:50%; touch-action:none;
+         -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+         will-change:transform; background:transparent; }
+  #hit.debug { background:rgba(255,0,0,.18); outline:1px dashed rgba(255,0,0,.5); }
+  .kv { display:flex; justify-content:space-between; gap:10px; font-size:12.5px; padding:2px 0; }
+  .kv span:last-child { font-family:ui-monospace,monospace; }
+  .bar { height:6px; background:#e3e3e3; border-radius:3px; overflow:hidden; margin-top:6px; }
+  .bar > i { display:block; height:100%; width:0; background:var(--moss); }
+</style>
+</head>
+<body>
+
+<h1>Hero mask + touch harness</h1>
+<p class="note">Open on the target iPhone. Work top to bottom; Test&nbsp;B is the one that decides the build.</p>
+
+<!-- ─────────────── ENV ─────────────── -->
+<div class="card">
+  <h2 style="margin-top:0">Environment</h2>
+  <table id="env"></table>
+</div>
+
+<!-- ─────────────── TEST A ─────────────── -->
+<h2>A. Does <code>mask-composite</code> render correctly?</h2>
+<p class="note">Correct = <b>three overlapping circular holes</b> (a 3-lobed blob) showing the tiles through the paper.
+Wrong = no holes, one hole, only the small centre overlap, or an all-transparent sheet.
+Panel 1 is the current production technique — treat it as ground truth. Panel 0 is an independent canvas drawing of the expected result.</p>
+
+<div class="card">
+  <b style="font-size:13px">0 · canvas reference (what correct looks like)</b>
+  <div class="panel"><canvas id="refCanvas"></canvas></div>
+</div>
+<div class="card">
+  <b style="font-size:13px">1 · nested layers <span class="mono">(production today)</span></b>
+  <div class="panel" id="pNested"></div>
+</div>
+<div class="card">
+  <b style="font-size:13px">2 · single layer · unprefixed <span class="mono">mask-composite:intersect</span></b>
+  <div class="panel" id="pStd"></div>
+</div>
+<div class="card">
+  <b style="font-size:13px">3 · single layer · <span class="mono">-webkit-mask-composite:source-in</span></b>
+  <div class="panel" id="pWk"></div>
+</div>
+
+<!-- ─────────────── TEST B ─────────────── -->
+<h2>B. Frame cost, full-viewport</h2>
+<p class="note">Each run animates a full-screen masked overlay over a tile grid for 6s on an identical path, then records the result.
+Run every variant, ideally twice. Watch the <b>worst frame</b> and <b>% slow</b> columns more than average FPS — jank shows up there first.</p>
+<div class="card">
+  <div>
+    <button data-run="nested-3">nested ×3</button>
+    <button data-run="std-3">intersect ×3</button>
+    <button data-run="nested-2">nested ×2</button>
+    <button data-run="std-2">intersect ×2</button>
+    <button data-run="wk-3" class="sec">webkit ×3</button>
+    <button data-run="wk-2" class="sec">webkit ×2</button>
+  </div>
+  <label style="display:block;margin:8px 0 4px;font-size:12.5px">
+    <input type="checkbox" id="roundCoords" checked> round mask coords to whole px
+  </label>
+  <table id="results">
+    <tr><th>variant</th><th>avg fps</th><th>worst</th><th>% slow</th><th>px</th></tr>
+  </table>
+  <button class="sec" id="clearResults">clear</button>
+</div>
+
+<!-- ─────────────── TEST C ─────────────── -->
+<h2>C. Drag-to-reveal, scroll lock, 1.5s dissolve</h2>
+<p class="note">
+  <b>Drag the hole</b> → page must stay put, hole follows, timer accrues only while moving.<br>
+  <b>Drag anywhere else</b> → page scrolls normally.<br>
+  Fling fast so the finger outruns the trailing circles — the drag must survive (implicit capture).<br>
+  Three circles (main + two trails at different lag). Switch technique to feel the cost under a real finger.
+</p>
+<div class="card">
+  <div style="margin-bottom:8px">
+    <button class="sec" data-dragtech="nested">nested ×3</button>
+    <button class="sec" data-dragtech="std">intersect ×3</button>
+    <button class="sec" data-dragtech="wk">webkit ×3</button>
+  </div>
+  <div id="dragStage"></div>
+  <div style="margin-top:10px">
+    <div class="kv"><span>touch on circle</span><span id="cDrag">no</span></div>
+    <div class="kv"><span>moving-drag time</span><span id="cTime">0 ms / 1500</span></div>
+    <div class="bar"><i id="cBar"></i></div>
+    <div class="kv"><span>page scrolled while dragging</span><span id="cScroll">no</span></div>
+    <div class="kv"><span>finger left circle mid-drag</span><span id="cOutran">no</span></div>
+    <div class="kv"><span>synthetic mousemove after tap</span><span id="cSynth">none yet</span></div>
+  </div>
+  <button id="cReset">reset</button>
+  <button class="sec" id="cDebug">show hit area</button>
+</div>
+
+<div id="stage"></div>
+<div id="stageBar"><span id="fpsLive">—</span><button id="stopRun">stop</button></div>
+
+<script>
+(function () {
+  'use strict';
+  const GRAD = (r,x,y) => `radial-gradient(circle ${r}px at ${x}px ${y}px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 99.5%, white 100%)`;
+  const $ = id => document.getElementById(id);
+
+  /* ───── environment ───── */
+  const supports = (p,v) => { try { return CSS.supports(p,v); } catch(e){ return false; } };
+  const yn = b => b ? '<span class="ok">yes</span>' : '<span class="bad">no</span>';
+  $('env').innerHTML = [
+    ['CSS.supports mask-composite:intersect', yn(supports('mask-composite','intersect'))],
+    ['CSS.supports -webkit-mask-composite:source-in', yn(supports('-webkit-mask-composite','source-in'))],
+    ['CSS.supports unprefixed mask-image', yn(supports('mask-image','radial-gradient(circle 9px at 0px 0px,#000,#fff)'))],
+    ['CSS.supports 100dvh', yn(supports('height','100dvh'))],
+    ['innerHeight / visualViewport', `${innerHeight} / ${(visualViewport&&Math.round(visualViewport.height))||'—'}`],
+    ['screen (css px)', `${innerWidth}×${innerHeight} @${devicePixelRatio}x`],
+    ['maxTouchPoints', String(navigator.maxTouchPoints)],
+    ['UA', '<span class="mono" style="word-break:break-all">'+navigator.userAgent+'</span>']
+  ].map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+
+  /* ───── shared builders ───── */
+  function tiles(n) {
+    const d = document.createElement('div'); d.className = 'backdrop';
+    for (let i=0;i<n;i++){ const t=document.createElement('div'); t.className='tile'; d.appendChild(t); }
+    return d;
+  }
+  function sheet(label) {
+    const s = document.createElement('div'); s.className = 'sheet';
+    if (label) { const l=document.createElement('div'); l.className='sheet-label'; l.textContent=label; s.appendChild(l); }
+    return s;
+  }
+  // technique: 'nested' | 'std' | 'wk'  → returns {root, apply(circles)}
+  function buildOverlay(technique, count, label) {
+    const root = document.createElement('div');
+    root.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+    if (technique === 'nested') {
+      const layers = [];
+      let host = root;
+      for (let i=0;i<count;i++){
+        const l = document.createElement('div');
+        l.style.cssText = 'position:absolute;inset:0';
+        host.appendChild(l); layers.push(l); host = l;
+      }
+      host.appendChild(sheet(label));
+      return { root, apply(cs){
+        for (let i=0;i<count;i++){
+          const v = GRAD(cs[i].r, cs[i].x, cs[i].y);
+          layers[i].style.setProperty('-webkit-mask-image', v);
+          layers[i].style.setProperty('mask-image', v);
+        }
+      }};
+    }
+    const layer = document.createElement('div');
+    layer.style.cssText = 'position:absolute;inset:0';
+    layer.appendChild(sheet(label));
+    root.appendChild(layer);
+    return { root, apply(cs){
+      const g = cs.slice(0,count).map(c => GRAD(c.r,c.x,c.y)).join(', ');
+      if (technique === 'std') {              // unprefixed only — isolates modern support
+        layer.style.setProperty('mask-image', g);
+        layer.style.setProperty('mask-composite', 'intersect');
+      } else {                                 // legacy webkit only
+        layer.style.setProperty('-webkit-mask-image', g);
+        layer.style.setProperty('-webkit-mask-composite', 'source-in');
+      }
+    }};
+  }
+
+  /* ───── A. correctness ───── */
+  function threeCircles(w,h){
+    const r = Math.min(w,h) * 0.26;
+    return [ {r, x:w*0.36, y:h*0.40}, {r, x:w*0.56, y:h*0.56}, {r, x:w*0.72, y:h*0.38} ];
+  }
+  function mountPanel(el, technique, label) {
+    el.appendChild(tiles(12));
+    const o = buildOverlay(technique, 3, label);
+    el.appendChild(o.root);
+    const draw = () => o.apply(threeCircles(el.clientWidth, el.clientHeight));
+    draw(); addEventListener('resize', draw);
+  }
+  mountPanel($('pNested'), 'nested', 'nested ×3');
+  mountPanel($('pStd'),    'std',    'intersect ×3');
+  mountPanel($('pWk'),     'wk',     'webkit ×3');
+
+  (function reference(){
+    const c = $('refCanvas'), box = c.parentElement;
+    const paint = () => {
+      const w = box.clientWidth, h = box.clientHeight, d = devicePixelRatio || 1;
+      c.width = w*d; c.height = h*d; c.style.width = w+'px'; c.style.height = h+'px';
+      const g = c.getContext('2d'); g.scale(d,d);
+      const tw = w/4, th = h/3, cols = ['#3b7ea1','#c96b3f','#5c5470','#7fb069'];
+      for (let y=0;y<3;y++) for (let x=0;x<4;x++){ g.fillStyle = cols[(x+y)%4]; g.fillRect(x*tw,y*th,tw-2,th-2); }
+      g.fillStyle = '#FBFAF8'; g.fillRect(0,0,w,h);
+      g.globalCompositeOperation = 'destination-out';
+      threeCircles(w,h).forEach(o => { g.beginPath(); g.arc(o.x,o.y,o.r,0,7); g.fill(); });
+    };
+    paint(); addEventListener('resize', paint);
+  })();
+
+  /* ───── B. perf ───── */
+  const stage = $('stage'), bar = $('stageBar'), fpsLive = $('fpsLive');
+  let run = null;
+  function pathAt(t, i, w, h) {            // deterministic, identical across variants
+    const lag = i * 0.10, s = t/1000 - lag;
+    return { x: w*(0.5 + 0.36*Math.sin(s*1.7)), y: h*(0.5 + 0.34*Math.sin(s*2.3 + 1.1)) };
+  }
+  function startRun(key) {
+    stopRun();
+    const [tech, nStr] = key.split('-'), n = +nStr;
+    const round = $('roundCoords').checked;
+    const w = innerWidth, h = innerHeight;
+    const radii = n === 3 ? [w*0.26, w*0.21, w*0.16] : [w*0.26, w*0.20];
+    stage.innerHTML = ''; stage.appendChild(tiles(20));
+    const o = buildOverlay(tech, n, key);
+    stage.appendChild(o.root); stage.classList.add('on'); bar.classList.add('on');
+
+    let frames = 0, worst = 0, slow = 0, t0 = 0, prev = 0, raf = 0;
+    const DUR = 6000, SLOW = 22;   // >22ms ≈ dropped frame at 60Hz
+    const tick = (t) => {
+      if (!t0) { t0 = t; prev = t; }
+      const dt = t - prev; prev = t;
+      if (frames > 2) { if (dt > worst) worst = dt; if (dt > SLOW) slow++; }
+      frames++;
+      const cs = [];
+      for (let i=0;i<n;i++){
+        const p = pathAt(t - t0, i, w, h);
+        cs.push(round ? {r:Math.round(radii[i]), x:Math.round(p.x), y:Math.round(p.y)}
+                      : {r:radii[i], x:p.x, y:p.y});
+      }
+      o.apply(cs);
+      const el = t - t0;
+      if (el < DUR) { fpsLive.textContent = `${key} · ${(frames/(el/1000)).toFixed(0)} fps · ${((DUR-el)/1000).toFixed(1)}s`; raf = requestAnimationFrame(tick); }
+      else finish(key, frames/(el/1000), worst, slow/frames*100, w*h);
+    };
+    raf = requestAnimationFrame(tick);
+    run = () => cancelAnimationFrame(raf);
+  }
+  function finish(key, fps, worst, slowPct, px) {
+    const tr = document.createElement('tr');
+    const cls = fps > 50 ? 'ok' : 'bad';
+    tr.innerHTML = `<td>${key}</td><td class="${cls}">${fps.toFixed(0)}</td>
+                    <td>${worst.toFixed(0)}ms</td><td>${slowPct.toFixed(0)}%</td>
+                    <td class="mono">${(px/1000).toFixed(0)}k</td>`;
+    $('results').appendChild(tr);
+    stopRun();
+  }
+  function stopRun(){ if (run) run(); run = null; stage.classList.remove('on'); bar.classList.remove('on'); stage.innerHTML=''; }
+  document.querySelectorAll('[data-run]').forEach(b => b.onclick = () => startRun(b.dataset.run));
+  $('stopRun').onclick = stopRun;
+  $('clearResults').onclick = () => { const t=$('results'); while(t.rows.length>1) t.deleteRow(1); };
+
+  /* ───── C. drag / scroll-lock / dissolve prototype ───── */
+  (function drag(){
+    const host = $('dragStage');
+    host.appendChild(tiles(20));
+
+    const hit = document.createElement('div');
+    hit.id = 'hit'; host.appendChild(hit);
+
+    const THRESHOLD = 1500, MOVE_EPS = 0.4;   // px/ms floor: "actually moving"
+    let W=0, H=0, R=0, HITR=0;
+    let cx=0, cy=0, tx=0, ty=0, ux=0, uy=0;   // main + two trails at different lag
+    let dragging=false, id=null, grabDX=0, grabDY=0;
+    let accum=0, lastT=0, revealed=false, scrollAt=0, outran=false;
+
+    // Overlay is rebuildable so the same gesture can be felt through each technique.
+    let o = null, tech = 'nested';
+    function build(t){
+      tech = t;
+      if (o) o.root.remove();
+      o = buildOverlay(tech, 3, tech + ' ×3');
+      o.root.style.transition = 'opacity .8s ease';
+      if (revealed) o.root.style.opacity = '0';
+      host.insertBefore(o.root, hit);          // hit div stays on top
+      paint();
+    }
+    document.querySelectorAll('[data-dragtech]').forEach(b =>
+      b.onclick = () => { build(b.dataset.dragtech); kick(); });
+
+    function size(){
+      W = host.clientWidth; H = host.clientHeight;
+      R = Math.min(W,H) * 0.22; HITR = R + 15;
+      hit.style.width = hit.style.height = (HITR*2)+'px';
+      if (!cx) { cx = W*0.5; cy = H*0.34; tx = ux = cx; ty = uy = cy; }
+      paint();
+    }
+    function paint(){
+      if (!o) return;
+      o.apply([{r:R,x:cx,y:cy},{r:R*0.8,x:tx,y:ty},{r:R*0.6,x:ux,y:uy}]);
+      hit.style.transform = `translate3d(${cx-HITR}px,${cy-HITR}px,0)`;
+    }
+    function clamp(){ cx = Math.max(R*0.4, Math.min(W-R*0.4, cx)); cy = Math.max(R*0.4, Math.min(H-R*0.4, cy)); }
+
+    let raf = 0;
+    function loop(){
+      tx += (cx-tx)*0.14; ty += (cy-ty)*0.14;      // stand-ins for the spring trails
+      ux += (cx-ux)*0.07; uy += (cy-uy)*0.07;      // slower lag = wider smear
+      paint();
+      const settling = Math.hypot(cx-tx,cy-ty) > 0.5 || Math.hypot(cx-ux,cy-uy) > 0.5;
+      if (dragging || settling) raf = requestAnimationFrame(loop); else raf = 0;
+    }
+    // lastT belongs to the drag timer only — the loop must not touch it, or the
+    // 1500ms accrual measures frame gaps instead of gaps between touchmoves.
+    const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
+
+    hit.addEventListener('touchstart', e => {
+      if (revealed || dragging) return;
+      const t = e.changedTouches[0]; id = t.identifier; dragging = true; outran = false;
+      const r = host.getBoundingClientRect();
+      grabDX = cx - (t.clientX - r.left); grabDY = cy - (t.clientY - r.top);
+      scrollAt = scrollY; lastT = 0;
+      $('cDrag').textContent = 'yes'; kick();
+    }, {passive:true});
+
+    // note: no preventDefault anywhere — touch-action:none on #hit is doing the work
+    hit.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      let t = null;
+      for (const c of e.changedTouches) if (c.identifier === id) t = c;
+      if (!t) return;
+      const r = host.getBoundingClientRect();
+      const px = cx, py = cy;
+      cx = t.clientX - r.left + grabDX; cy = t.clientY - r.top + grabDY; clamp();
+      const d = Math.hypot(cx-px, cy-py), now = performance.now();
+      const dt = lastT ? now-lastT : 16; lastT = now;
+      if (!revealed && d/dt > MOVE_EPS) {                 // stationary finger accrues nothing
+        accum = Math.min(THRESHOLD, accum + dt);
+        $('cTime').textContent = `${accum|0} ms / ${THRESHOLD}`;
+        $('cBar').style.width = (accum/THRESHOLD*100)+'%';
+        if (accum >= THRESHOLD) { revealed = true; o.root.style.opacity = '0'; $('cTime').textContent = 'DISSOLVED'; }
+      }
+      if (Math.hypot(t.clientX-r.left-cx, t.clientY-r.top-cy) > HITR) { outran = true; $('cOutran').textContent = 'yes (drag survived)'; }
+      if (scrollY !== scrollAt) $('cScroll').textContent = 'YES — scroll lock failed';
+      kick();
+    }, {passive:true});
+
+    const end = () => { if (!dragging) return; dragging = false; id = null; $('cDrag').textContent = 'no'; kick(); };
+    hit.addEventListener('touchend', end, {passive:true});
+    hit.addEventListener('touchcancel', end, {passive:true});
+
+    // does iOS synthesise a mousemove from a tap? (would teleport the circle in production)
+    let touched = 0;
+    addEventListener('touchstart', () => { touched = performance.now(); }, {passive:true});
+    addEventListener('mousemove', () => {
+      if (touched && performance.now()-touched < 1200)
+        $('cSynth').innerHTML = '<span class="bad">YES — gate mouse writes</span>';
+    }, {passive:true});
+
+    $('cReset').onclick = () => {
+      revealed = false; accum = 0; o.root.style.opacity = '1';
+      cx = W*0.5; cy = H*0.34; outran = false;
+      $('cTime').textContent = `0 ms / ${THRESHOLD}`; $('cBar').style.width = '0';
+      $('cScroll').textContent = 'no'; $('cOutran').textContent = 'no'; kick();
+    };
+    $('cDebug').onclick = () => hit.classList.toggle('debug');
+
+    size(); build('nested'); addEventListener('resize', size);
+  })();
+})();
+</script>
+</body>
+</html>
