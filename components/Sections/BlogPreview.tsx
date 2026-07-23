@@ -14,7 +14,7 @@ const BlogPreview: React.FC = () => {
       <div className="px-6 md:px-12 max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="mb-20">
-          <h2 className="font-serif text-5xl text-charcoal tracking-tight">Writings</h2>
+          <h2 className="font-serif text-5xl md:text-7xl text-charcoal tracking-tight">Writings</h2>
           <p className="mt-6 text-charcoal/60 max-w-md text-lg leading-relaxed">
             Thoughts on life, design, art, music, etc. This section is still under construction!
           </p>

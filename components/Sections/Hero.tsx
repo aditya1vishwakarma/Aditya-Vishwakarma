@@ -1,10 +1,39 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion as motionComponent, AnimatePresence, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion';
-import { Camera, ArrowLeft, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 // Fix: Cast motion to any to resolve property existence type errors for SVG and HTML motion elements
 const motion = motionComponent as any;
+
+/**
+ * How the three circular holes get combined into one blob.
+ * Each mask layer is transparent inside its circle and opaque outside, so compositing
+ * them with intersect/source-in yields a hole at the UNION of the circles.
+ *
+ * Order is by measured cost — see public/mask-test.html, run on-device:
+ *   webkit    one layer, three mask images. Fastest on iOS by a clear margin.
+ *   intersect one layer, standards syntax. Correct everywhere modern, but slower on iOS.
+ *   nested    three stacked masked elements. Universal, and ~3x the per-frame raster.
+ * Detected rather than assumed: Firefox on Android has the standard property but not
+ * the webkit one, and every iOS browser is WebKit underneath regardless of its name.
+ */
+type MaskMode = 'webkit' | 'intersect' | 'nested';
+
+const detectMaskMode = (): MaskMode => {
+  if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return 'nested';
+  if (CSS.supports('-webkit-mask-composite', 'source-in')) return 'webkit';
+  if (CSS.supports('mask-composite', 'intersect')) return 'intersect';
+  return 'nested';
+};
+
+const MOBILE_BREAKPOINT = 600;
+const REVEAL_MS = 1500;   // cumulative moving-drag time before the overlay dissolves
+const MOVE_EPS = 0.4;     // px/ms floor, so a resting finger accrues nothing
+const HIT_PADDING = 15;   // grab forgiveness around the visible circle
+const DESKTOP_REVEAL_DIST = 1600;
+
+type Circle = { r: number; x: number; y: number };
 
 const Hero: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -41,98 +70,225 @@ const Hero: React.FC = () => {
   // 3. DYNAMIC PARAMETERS
   const mainRadius = useTransform(velocity, [0, 2000], [100, 130]);
 
-  // Refs for direct DOM mask updates (bypasses framer-motion style application issues in WebKit)
-  const maskOuterRef = useRef<HTMLDivElement>(null);
-  const maskMiddleRef = useRef<HTMLDivElement>(null);
-  const maskInnerRef = useRef<HTMLDivElement>(null);
+  // Mask technique is resolved once, on the client, before first paint.
+  const [maskMode] = useState<MaskMode>(detectMaskMode);
+  // layerRefs[0] is the only layer in webkit/intersect mode; nested uses all three.
+  const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const hitRef = useRef<HTMLDivElement>(null);
+
+  // Circle sizes: fixed px on desktop, viewport-relative on mobile so the blob keeps
+  // the same visual weight from an SE to a Pro Max.
+  const radii = useRef({ main: 100, trail: 80, slow: 60 });
+  const reducedMotion = useRef(false);
+  // Mirrors of state for the rAF loop, which closes over its first render otherwise.
+  const isMobileRef = useRef(false);
+  const isFullyRevealedRef = useRef(false);
+  useEffect(() => { isMobileRef.current = isMobile; }, [isMobile]);
+  useEffect(() => { isFullyRevealedRef.current = isFullyRevealed; }, [isFullyRevealed]);
 
   // Helper: build a radial mask gradient string
   const buildMask = (r: number, x: number, y: number) =>
     `radial-gradient(circle ${r}px at ${x}px ${y}px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 99.5%, white 100%)`;
 
-  // Apply masks directly via DOM — more reliable than MotionValue style in Safari 27
-  useEffect(() => {
-    const applyMask = (el: HTMLElement | null, value: string) => {
-      if (!el) return;
-      el.style.setProperty('-webkit-mask-image', value);
-      el.style.setProperty('mask-image', value);
-    };
+  // Attaching the ref is also when we set the composite mode — it never changes after,
+  // so it stays out of the per-frame path.
+  const setLayerRef = (i: number) => (el: HTMLDivElement | null) => {
+    layerRefs.current[i] = el;
+    if (!el || i !== 0 || maskMode === 'nested') return;
+    if (maskMode === 'webkit') el.style.setProperty('-webkit-mask-composite', 'source-in');
+    else el.style.setProperty('mask-composite', 'intersect');
+  };
 
-    const unsubMain = smoothX.on('change', () => {
-      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
-    });
-    const unsubMainY = smoothY.on('change', () => {
-      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
-    });
-    const unsubMainR = mainRadius.on('change', () => {
-      applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
-    });
-    const unsubTrailX = trailX.on('change', () => {
-      applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
-    });
-    const unsubTrailY = trailY.on('change', () => {
-      applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
-    });
-    const unsubSlowX = slowX.on('change', () => {
-      applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
-    });
-    const unsubSlowY = slowY.on('change', () => {
-      applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
-    });
+  // Whole-pixel coords: sub-pixel changes force a re-raster for no visible gain.
+  const lastApplied = useRef('');
+  const applyMasks = (circles: Circle[]) => {
+    const grads = circles.map(c => buildMask(Math.round(c.r), Math.round(c.x), Math.round(c.y)));
+    const key = grads.join('|');
+    if (key === lastApplied.current) return;   // idle frames cost nothing
+    lastApplied.current = key;
 
-    // Set initial masks
-    applyMask(maskOuterRef.current, buildMask(mainRadius.get(), smoothX.get(), smoothY.get()));
-    applyMask(maskMiddleRef.current, buildMask(80, trailX.get(), trailY.get()));
-    applyMask(maskInnerRef.current, buildMask(60, slowX.get(), slowY.get()));
-
-    return () => {
-      unsubMain(); unsubMainY(); unsubMainR();
-      unsubTrailX(); unsubTrailY();
-      unsubSlowX(); unsubSlowY();
-    };
-  }, []);
+    if (maskMode === 'nested') {
+      // Walk every layer, not just the ones we have circles for: reduced-motion drops to a
+      // single circle, and a stale mask left on layers 1-2 would strand extra holes.
+      for (let i = 0; i < layerRefs.current.length; i++) {
+        const el = layerRefs.current[i];
+        if (!el) continue;
+        const g = grads[i] ?? 'none';
+        el.style.setProperty('-webkit-mask-image', g);
+        el.style.setProperty('mask-image', g);
+      }
+      return;
+    }
+    const el = layerRefs.current[0];
+    if (!el) return;
+    const value = grads.join(', ');
+    // Set only the property family that matches the detected mode — mixing prefixed and
+    // unprefixed mask-image lets the two composite defaults fight each other.
+    if (maskMode === 'webkit') el.style.setProperty('-webkit-mask-image', value);
+    else el.style.setProperty('mask-image', value);
+  };
 
   const movementBuffer = useRef<{ x: number; y: number; time: number }[]>([]);
+  const dragMs = useRef(0);
+  const lastTouchAt = useRef(0);
 
+  // Single per-frame write, so the mask and the invisible hit target can never
+  // disagree about where the circle is.
+  const lastHitSize = useRef(0);
   useAnimationFrame((time, delta) => {
     const currentX = mouseX.get();
     const currentY = mouseY.get();
     const dist = Math.hypot(currentX - lastMousePos.current.x, currentY - lastMousePos.current.y);
     velocity.set((dist / (delta || 16)) * 1000);
     lastMousePos.current = { x: currentX, y: currentY };
+
+    if (isFullyRevealedRef.current) return;   // overlay is transparent; nothing to paint
+
+    const mobile = isMobileRef.current;
+    const r = radii.current;
+    // Mobile pins the lead circle to the finger so a grab never slips; desktop rides
+    // the spring, which is what gives the cursor its fluid feel.
+    const lead: Circle = mobile
+      ? { r: r.main, x: currentX, y: currentY }
+      : { r: mainRadius.get(), x: smoothX.get(), y: smoothY.get() };
+
+    applyMasks(reducedMotion.current ? [lead] : [
+      lead,
+      { r: r.trail, x: trailX.get(), y: trailY.get() },
+      { r: r.slow, x: slowX.get(), y: slowY.get() },
+    ]);
+
+    const hit = hitRef.current;
+    if (hit) {
+      const size = Math.round((lead.r + HIT_PADDING) * 2);
+      if (size !== lastHitSize.current) {
+        lastHitSize.current = size;
+        hit.style.width = `${size}px`;
+        hit.style.height = `${size}px`;
+      }
+      hit.style.transform = `translate3d(${Math.round(lead.x - size / 2)}px, ${Math.round(lead.y - size / 2)}px, 0)`;
+    }
   });
 
+  const accrueDesktopDistance = (x: number, y: number) => {
+    const now = Date.now();
+    movementBuffer.current.push({ x, y, time: now });
+    movementBuffer.current = movementBuffer.current.filter(p => now - p.time < 1500);
+    if (movementBuffer.current.length <= 10) return;
+
+    let totalDist = 0;
+    for (let i = 1; i < movementBuffer.current.length; i++) {
+      totalDist += Math.hypot(
+        movementBuffer.current[i].x - movementBuffer.current[i - 1].x,
+        movementBuffer.current[i].y - movementBuffer.current[i - 1].y
+      );
+    }
+    if (totalDist > DESKTOP_REVEAL_DIST && !showRevealButton) setShowRevealButton(true);
+  };
+
+  // One entry point for both inputs. Phones dissolve on sustained motion because patience
+  // is short; wider layouts have the room to surface the Reveal button instead.
+  const progressReveal = (x: number, y: number, dist: number, dt: number) => {
+    if (isFullyRevealed) return;
+    if (!isMobile) { accrueDesktopDistance(x, y); return; }
+    if (!dt || dist / dt < MOVE_EPS) return;   // resting finger accrues nothing
+    dragMs.current = Math.min(REVEAL_MS, dragMs.current + dt);
+    if (dragMs.current >= REVEAL_MS) handleReveal();
+  };
+
+  const lastMouseT = useRef(0);
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
+      // iOS fabricates a mousemove after every tap. Without this guard a single tap
+      // teleports the blob across the screen.
+      if (performance.now() - lastTouchAt.current < 1000) return;
+
       const rect = containerRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      const dist = Math.hypot(x - mouseX.get(), y - mouseY.get());
 
       mouseX.set(x);
       mouseY.set(y);
 
       if (isFullyRevealed) return;
 
-      const now = Date.now();
-      movementBuffer.current.push({ x, y, time: now });
-      movementBuffer.current = movementBuffer.current.filter(p => now - p.time < 1500);
-
-      if (movementBuffer.current.length > 10) {
-        let totalDist = 0;
-        for (let i = 1; i < movementBuffer.current.length; i++) {
-          totalDist += Math.hypot(
-            movementBuffer.current[i].x - movementBuffer.current[i - 1].x,
-            movementBuffer.current[i].y - movementBuffer.current[i - 1].y
-          );
-        }
-        if (totalDist > 1600 && !showRevealButton) setShowRevealButton(true);
-      }
+      // A narrow desktop window gets the mobile layout but has no touch input, so mouse
+      // motion feeds the same accumulator — otherwise the gallery would be unreachable there.
+      const now = performance.now();
+      const dt = lastMouseT.current ? now - lastMouseT.current : 16;
+      lastMouseT.current = now;
+      progressReveal(x, y, dist, dt);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [showRevealButton, isFullyRevealed]);
+  }, [showRevealButton, isFullyRevealed, isMobile]);
+
+  // ── Touch drag (all widths: phones, tablets, touchscreen laptops) ─────────────
+  // No preventDefault anywhere. `touch-none` on the hit element is what stops the page
+  // scrolling, which the browser decides at gesture start — unlike preventDefault, it
+  // cannot arrive too late to matter.
+  const drag = useRef({ active: false, id: null as number | null, dx: 0, dy: 0, lastT: 0 });
+
+  const localPoint = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
+  };
+
+  // Keep the circle inside the hero: with no fallback button, a blob dragged off-screen
+  // and released would be unrecoverable.
+  const clampToHero = (x: number, y: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const w = rect?.width ?? window.innerWidth;
+    const h = rect?.height ?? window.innerHeight;
+    const m = radii.current.main * 0.4;
+    return { x: Math.max(m, Math.min(w - m, x)), y: Math.max(m, Math.min(h - m, y)) };
+  };
+
+  const handleCircleTouchStart = (e: React.TouchEvent) => {
+    if (isFullyRevealed || drag.current.active) return;
+    const t = e.changedTouches[0];
+    const p = localPoint(t.clientX, t.clientY);
+    // Preserve the grab offset so the circle doesn't jump to centre under the finger.
+    drag.current = {
+      active: true, id: t.identifier,
+      dx: mouseX.get() - p.x, dy: mouseY.get() - p.y,
+      lastT: performance.now(),
+    };
+    lastTouchAt.current = performance.now();
+  };
+
+  const handleCircleTouchMove = (e: React.TouchEvent) => {
+    const d = drag.current;
+    if (!d.active) return;
+    lastTouchAt.current = performance.now();
+
+    // Track the original finger; a second one landing mid-drag must not hijack it.
+    let t: React.Touch | null = null;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === d.id) t = e.changedTouches[i];
+    }
+    if (!t) return;
+
+    const p = localPoint(t.clientX, t.clientY);
+    const next = clampToHero(p.x + d.dx, p.y + d.dy);
+    const dist = Math.hypot(next.x - mouseX.get(), next.y - mouseY.get());
+    const now = performance.now();
+    const dt = d.lastT ? now - d.lastT : 16;
+    d.lastT = now;
+
+    mouseX.set(next.x);
+    mouseY.set(next.y);
+    progressReveal(next.x, next.y, dist, dt);
+  };
+
+  const handleCircleTouchEnd = () => {
+    drag.current.active = false;
+    drag.current.id = null;
+    lastTouchAt.current = performance.now();
+  };
 
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -175,12 +331,54 @@ const Hero: React.FC = () => {
     { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/20kgtoyota.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/20kgtoyota.avif" }
   ];
 
-  // Mobile detection (disables cursor animation on small screens)
+  // Where the blob sits before anyone has touched it. On mobile that's the empty upper
+  // area, clear of the name block at ~75%.
+  const restPosition = (mobile: boolean) => mobile
+    ? { x: window.innerWidth * 0.5, y: window.innerHeight * 0.34 }
+    : { x: window.innerWidth * 0.745, y: window.innerHeight * 0.265 };
+
+  // jump() moves a spring without animating, so repositioning never shows a swoop.
+  const settleAt = (x: number, y: number) => {
+    [mouseX, smoothX, trailX, slowX].forEach((mv: any) => (mv.jump ? mv.jump(x) : mv.set(x)));
+    [mouseY, smoothY, trailY, slowY].forEach((mv: any) => (mv.jump ? mv.jump(y) : mv.set(y)));
+  };
+
+  // Viewport sizing: layout branch, circle radii, and the resting position all follow width.
+  const wasMobile = useRef<boolean | null>(null);
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 600);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const syncViewport = () => {
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+      isMobileRef.current = mobile;
+      if (mobile) setShowRevealButton(false);
+
+      radii.current = mobile
+        ? (() => {
+            const base = Math.min(window.innerWidth, window.innerHeight) * 0.22;
+            return { main: base, trail: base * 0.8, slow: base * 0.6 };
+          })()
+        : { main: 100, trail: 80, slow: 60 };
+
+      // Re-seat the blob on first run and whenever we cross the breakpoint, since the
+      // two layouts want it in completely different places.
+      if (wasMobile.current !== mobile) {
+        wasMobile.current = mobile;
+        const p = restPosition(mobile);
+        settleAt(p.x, p.y);
+      }
+    };
+    syncViewport();
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncMotion = () => { reducedMotion.current = motionQuery.matches; };
+    syncMotion();
+
+    window.addEventListener('resize', syncViewport);
+    motionQuery.addEventListener('change', syncMotion);
+    return () => {
+      window.removeEventListener('resize', syncViewport);
+      motionQuery.removeEventListener('change', syncMotion);
+    };
   }, []);
 
 
@@ -249,32 +447,111 @@ const Hero: React.FC = () => {
   };
   */
 
-  const handleReveal = () => { setIsFullyRevealed(true); setShowRevealButton(false); };
-  const handleHide = () => { setIsFullyRevealed(false); movementBuffer.current = []; setSelectedImageIndex(null); };
+  function handleReveal() {
+    setIsFullyRevealed(true);
+    isFullyRevealedRef.current = true;
+    setShowRevealButton(false);
+    drag.current.active = false;
+    drag.current.id = null;
+  }
+
+  const handleHide = () => {
+    setIsFullyRevealed(false);
+    isFullyRevealedRef.current = false;
+    movementBuffer.current = [];
+    dragMs.current = 0;              // next reveal starts from a full 1.5s again
+    lastApplied.current = '';        // force a repaint of the mask we stopped updating
+    setSelectedImageIndex(null);
+    const p = restPosition(isMobile);
+    settleAt(p.x, p.y);
+  };
+
+  // The paper sheet the blob punches through. One sheet for every width — only the
+  // typography inside it differs — so there's a single masked layer to reason about.
+  const overlayContent = (
+    <>
+      <div className="absolute inset-0 bg-[#FBFAF8]" />
+      <div className="relative h-full w-full">
+        {/* Scroll Indicator - Bottom Middle */}
+        <div className={`absolute left-1/2 -translate-x-1/2 text-charcoal/20 ${isMobile ? 'bottom-7' : 'bottom-[28px]'}`}>
+          <ChevronDown size={32} strokeWidth={1.5} />
+        </div>
+
+        {isMobile ? (
+          <div className="absolute inset-0 flex flex-col justify-center items-start text-left px-6">
+            {/* Name + kicker share one shrink-to-fit column, so the column's width is set by
+                the widest line ("Vishwakarma") and the right-aligned kicker lands on its end
+                rather than on the screen margin.
+                translate-y offsets the group down from the container's vertical centre so the
+                name sits ~75% down the viewport, kicker trailing below it. */}
+            <div className="flex flex-col translate-y-[23vh]">
+              {/* Oversized statement name - stacked, near-bleed to the right margin */}
+              <h1 className="font-serif font-normal text-charcoal leading-[0.9] tracking-[-0.03em] text-[clamp(2.75rem,15vw,7rem)]">
+                <span className="block">Aditya</span>
+                <span className="block text-moss">Vishwakarma</span>
+              </h1>
+
+              {/* Role kicker - Nimbus Sans, matches desktop family.
+                  Right-aligned against the left-aligned name for deliberate asymmetry.
+                  -mr cancels the trailing letter-spacing so the last glyph, not the text box,
+                  lines up with the end of "Vishwakarma". */}
+              <div className="mt-7 text-right -mr-[0.18em] font-sans uppercase text-charcoal/50 tracking-[0.18em] text-[13px] leading-[1.9]">
+                <span className="block">Product Manager</span>
+                <span className="block">Based in San Francisco</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Bottom-Left Stack Container */
+          <div className="absolute bottom-[60px] left-[60px] flex flex-col items-start whitespace-nowrap">
+            {/* Role Stack */}
+            <div className="flex flex-col font-sans mb-[clamp(20px,3.6vw,58px)]">
+              <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
+                Product Manager
+              </span>
+              <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
+                Based in San Francisco
+              </span>
+            </div>
+
+            {/* Name Stack */}
+            <div className="flex flex-col items-start font-serif font-normal text-[12vw] leading-[0.92] text-charcoal">
+              <span className="tracking-[-0.04em] -ml-[0.06em]">Aditya</span>
+              <span className="text-moss tracking-[-0.02em] -ml-[0.05em]">Vishwakarma</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <section
       ref={containerRef}
-      className={`relative h-screen w-full flex flex-col justify-center items-center overflow-hidden bg-[#D4DCDA] ${!isMobile && isHovered && !isFullyRevealed && selectedImageIndex === null ? 'cursor-none' : ''}`}
+      /* h-dvh, not h-screen: iOS reports 100vh as the height with the URL bar hidden, so
+         the hero overflowed and the chevron sat below the fold on first paint. */
+      className={`relative h-dvh w-full flex flex-col justify-center items-center overflow-hidden bg-[#D4DCDA] ${!isMobile && isHovered && !isFullyRevealed && selectedImageIndex === null ? 'cursor-none' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* LAYER 1: BOTTOM GALLERY (Apple Photos Style) */}
-      <div className="absolute inset-0 z-0 flex flex-col">
+      {/* On mobile the header + grid center as one group so the caption sits just above
+           the photos instead of being pinned to the top of the viewport. */}
+      <div className={`absolute inset-0 z-0 flex flex-col ${isMobile ? 'justify-center' : ''}`}>
         {/* HEADER BAR */}
         <AnimatePresence>
           {isFullyRevealed && (
             <motion.div
               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className="w-full pt-10 pl-4 md:pl-10 pr-10 pb-4 z-20 pointer-events-auto flex justify-between items-center"
+              className={`w-full z-20 pointer-events-auto flex justify-between items-center gap-3 ${isMobile ? 'px-5 pb-4' : 'pt-10 pl-4 md:pl-10 pr-10 pb-4'}`}
             >
-              <p className="font-serif text-xl md:text-2xl text-charcoal/80 max-w-[70%] leading-none transform translate-y-[2px]">
-                {isMobile ? "I'm also a hobbyist photographer!" : "I'm also a hobbyist photographer, here are some of my favorites!"}
+              <p className={`font-serif text-charcoal/80 max-w-[70%] ${isMobile ? 'text-[17px] leading-snug' : 'text-xl md:text-2xl leading-none transform translate-y-[2px]'}`}>
+                {isMobile ? "I'm also a hobbyist photographer, here are some of my favorites!" : "I'm also a hobbyist photographer, here are some of my favorites!"}
               </p>
 
               <motion.button
                 onClick={handleHide}
-                className="w-[140px] py-3 bg-moss text-white rounded-full font-sans text-sm tracking-[0.1em] uppercase hover:bg-charcoal transition-all shadow-2xl active:scale-95 shrink-0"
+                className={`bg-moss text-white rounded-full font-sans tracking-[0.1em] uppercase hover:bg-charcoal transition-all active:scale-95 shrink-0 ${isMobile ? 'inline-flex items-center justify-center min-h-[44px] px-5 text-[11px] shadow-lg' : 'w-[140px] py-3 text-sm shadow-2xl'}`}
               >
                 Hide
               </motion.button>
@@ -283,7 +560,7 @@ const Hero: React.FC = () => {
         </AnimatePresence>
 
         {/* PHOTO GRID - 4x8 on desktop, 4x5 on mobile (no overflow) */}
-        <div className={`flex-1 w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
+        <div className={`w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isMobile ? '' : 'flex-1'} ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full max-h-full aspect-[4/5] md:aspect-[2/1]">
             {(isMobile ? images.slice(0, 20) : images).map((img, i) => (
               <motion.div
@@ -359,82 +636,50 @@ const Hero: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* LAYER 2: CSS-MASKED OVERLAY (cursor animation - desktop only)
-           Uses nested elements instead of mask-composite for Safari compatibility.
-           Each div applies one mask via direct DOM refs — nesting achieves the intersect effect naturally. */}
-      {!isMobile && (
-        <motion.div
-          className="absolute inset-0 z-10 pointer-events-none"
-          animate={{ opacity: isFullyRevealed ? 0 : 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <div ref={maskOuterRef} className="absolute inset-0">
-            <div ref={maskMiddleRef} className="absolute inset-0">
-              <div ref={maskInnerRef} className="absolute inset-0">
-                <div className="absolute inset-0 bg-[#FBFAF8]" />
-                <div className="relative h-full w-full">
-                  {/* Scroll Indicator - Bottom Middle */}
-                  <div className="absolute bottom-[28px] left-1/2 -translate-x-1/2 text-charcoal/20">
-                    <ChevronDown size={32} strokeWidth={1.5} />
-                  </div>
-
-                  {/* Bottom-Left Stack Container */}
-                  <div className="absolute bottom-[60px] left-[60px] flex flex-col items-start whitespace-nowrap">
-
-                    {/* Role Stack */}
-                    <div className="flex flex-col font-sans mb-[clamp(20px,3.6vw,58px)]">
-                      <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
-                        Product Manager
-                      </span>
-                      <span className="text-[clamp(14px,2.2vw,28px)] font-medium tracking-[0.02em] leading-[1.4] text-charcoal/70 normal-case">
-                        Based in San Francisco
-                      </span>
-                    </div>
-
-                    {/* Name Stack */}
-                    <div className="flex flex-col items-start font-serif font-normal text-[12vw] leading-[0.92] text-charcoal">
-                      <span className="tracking-[-0.04em] -ml-[0.06em]">Aditya</span>
-                      <span className="text-moss tracking-[-0.02em] -ml-[0.05em]">Vishwakarma</span>
-                    </div>
-                  </div>
-                </div>
+      {/* LAYER 2: CSS-MASKED OVERLAY — every width now. The three circles are combined
+           into one hole by the technique detected at mount; see detectMaskMode above. */}
+      <motion.div
+        className="absolute inset-0 z-10 pointer-events-none"
+        animate={{ opacity: isFullyRevealed ? 0 : 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        {maskMode === 'nested' ? (
+          <div ref={setLayerRef(0)} className="absolute inset-0">
+            <div ref={setLayerRef(1)} className="absolute inset-0">
+              <div ref={setLayerRef(2)} className="absolute inset-0">
+                {overlayContent}
               </div>
             </div>
           </div>
-        </motion.div>
-      )}
-
-      {/* LAYER 2: STATIC HERO TEXT (mobile only) */}
-      {isMobile && !isFullyRevealed && (
-        <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center px-4 bg-[#FBFAF8]">
-          {/* Mobile Camera Icon Button - Top Left */}
-          <button
-            onClick={handleReveal}
-            className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center text-moss hover:text-charcoal transition-colors pointer-events-auto"
-          >
-            <Camera size={24} />
-          </button>
-
-          <h1 className="font-serif leading-none text-charcoal mb-4 whitespace-nowrap text-[clamp(2.5rem,8.5vw,11rem)]">
-            Aditya <span className="text-moss font-serif font-normal tracking-[-0.02em]">Vishwakarma</span>
-          </h1>
-          <div className="w-24 h-[1px] bg-charcoal/20 mx-auto mb-10" />
-          <p className="text-lg text-charcoal/60 font-sans tracking-tight">
-            Product Manager Based in San Francisco.
-          </p>
-
-          {/* Scroll Indicator - Bottom Middle */}
-          <div className="absolute bottom-7 left-1/2 -translate-x-1/2 text-charcoal/20">
-            <ChevronDown size={32} strokeWidth={1.5} />
+        ) : (
+          <div ref={setLayerRef(0)} className="absolute inset-0">
+            {overlayContent}
           </div>
-        </div>
+        )}
+      </motion.div>
+
+      {/* Invisible grab target tracking the lead circle. It exists so the browser — not our
+           JS — decides at gesture start whether this touch scrolls the page, via touch-none.
+           The visible circle is a hole in a mask and cannot be hit-tested. Its size and
+           position are written in the same frame as the mask, so they cannot drift apart.
+           Rendered at all widths: touchscreen laptops are real. */}
+      {!isFullyRevealed && (
+        <div
+          ref={hitRef}
+          onTouchStart={handleCircleTouchStart}
+          onTouchMove={handleCircleTouchMove}
+          onTouchEnd={handleCircleTouchEnd}
+          onTouchCancel={handleCircleTouchEnd}
+          className="absolute top-0 left-0 z-20 rounded-full pointer-events-auto touch-none select-none [-webkit-touch-callout:none] [will-change:transform]"
+          aria-hidden="true"
+        />
       )}
 
 
-      {/* UI CONTROLS - Only show Reveal button (Hide is now in header) */}
+      {/* UI CONTROLS - Only show Reveal button (Hide is now in header), desktop only */}
       <div className="absolute top-10 right-10 z-50 pointer-events-auto">
         <AnimatePresence mode="wait">
-          {showRevealButton && !isFullyRevealed && (
+          {!isMobile && showRevealButton && !isFullyRevealed && (
             <motion.button
               key="reveal-btn" onClick={handleReveal}
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9 }}

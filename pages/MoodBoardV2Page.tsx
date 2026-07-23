@@ -6,7 +6,8 @@ import { motion as motionComponent, AnimatePresence, useSpring, useTransform } f
 import * as ReactRouterDOM from 'react-router-dom';
 import { MOOD_BOARD } from '../constants';
 import type { MoodBoardItem } from '../types';
-import MoodBoardCard from '../components/UI/MoodBoardCard';
+import MoodBoardCard, { GlassRefractionFilter } from '../components/UI/MoodBoardCard';
+import Squircle from '../components/UI/Squircle';
 
 const { Link } = ReactRouterDOM as any;
 const motion = motionComponent as any;
@@ -336,6 +337,10 @@ const MoodBoardV2Page: React.FC = () => {
   const [hoveredItem, setHoveredItem] = useState<MoodBoardItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [viewMode, setViewMode] = useState<'circle' | 'grid'>('grid');
+  // Mobile-only layout: 2-column masonry of images (tap to expand) vs. the
+  // original single scrollable list of full cards.
+  const [mobileLayout, setMobileLayout] = useState<'masonry' | 'list'>('masonry');
+  const [expandedItem, setExpandedItem] = useState<MoodBoardItem | null>(null);
   const [gridItems] = useState<MoodBoardItem[]>(() => [...MOOD_BOARD].sort(() => Math.random() - 0.5));
 
   // Smooth the progress for the loading bar
@@ -369,6 +374,8 @@ const MoodBoardV2Page: React.FC = () => {
       style={{ background: '#FBFCF6' }}
       onMouseMove={handleMouseMove}
     >
+      {/* SVG displacement filter for glass refraction (mounted once). */}
+      <GlassRefractionFilter />
 
       {/* ──── LOADING OVERLAY ──── */}
       <AnimatePresence>
@@ -405,6 +412,49 @@ const MoodBoardV2Page: React.FC = () => {
       {/* ──── TOP BAR ──── */}
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-row items-start md:items-center justify-between px-5 md:px-8 py-5 md:py-6 pointer-events-none gap-4">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pointer-events-auto">
+
+          {/* Mobile Layout Toggle — masonry image grid vs. single list.
+              Hidden on desktop, where the Ring/Grid toggle is used instead. */}
+          <div className="flex md:hidden items-center gap-1 h-[40px] px-1 bg-white/50 rounded-[13px] border border-charcoal/10 backdrop-blur-xl shadow-lg">
+            <button
+              onClick={() => setMobileLayout('masonry')}
+              aria-label="Grid view"
+              className={`relative flex items-center justify-center h-[32px] w-[38px] rounded-[9px] transition-colors duration-300 ${mobileLayout === 'masonry' ? 'text-charcoal' : 'text-charcoal/40'
+                }`}
+            >
+              {mobileLayout === 'masonry' && (
+                <motion.div
+                  layoutId="mobileTogglePill"
+                  className="absolute inset-0 bg-white rounded-[9px] shadow-sm"
+                  transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                />
+              )}
+              <svg className="relative z-10" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="3" width="7.5" height="8.5" rx="2" />
+                <rect x="13.5" y="3" width="7.5" height="12" rx="2" />
+                <rect x="3" y="14" width="7.5" height="7" rx="2" />
+                <rect x="13.5" y="17.5" width="7.5" height="3.5" rx="1.6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setMobileLayout('list')}
+              aria-label="List view"
+              className={`relative flex items-center justify-center h-[32px] w-[38px] rounded-[9px] transition-colors duration-300 ${mobileLayout === 'list' ? 'text-charcoal' : 'text-charcoal/40'
+                }`}
+            >
+              {mobileLayout === 'list' && (
+                <motion.div
+                  layoutId="mobileTogglePill"
+                  className="absolute inset-0 bg-white rounded-[9px] shadow-sm"
+                  transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                />
+              )}
+              <svg className="relative z-10" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="4" width="18" height="7" rx="2.2" />
+                <rect x="3" y="13" width="18" height="7" rx="2.2" />
+              </svg>
+            </button>
+          </div>
 
           {/* View Toggle — Ring is disabled on mobile, so hide the toggle there */}
           <div className="hidden md:flex items-center bg-white/50 p-1 rounded-full border border-charcoal/10 backdrop-blur-md">
@@ -449,7 +499,7 @@ const MoodBoardV2Page: React.FC = () => {
 
         <Link
           to="/#about"
-          className="pointer-events-auto flex items-center justify-center text-center min-w-0 md:min-w-[120px] font-serif italic font-medium text-base md:text-2xl px-4 md:px-6 py-1.5 md:py-3 text-charcoal bg-white/50 border border-charcoal/10 rounded-[16px] md:rounded-[22px] backdrop-blur-xl hover:bg-white/60 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
+          className="pointer-events-auto flex items-center justify-center text-center min-h-[40px] md:min-h-0 min-w-[80px] md:min-w-[120px] font-serif italic font-medium text-base md:text-2xl px-4 md:px-6 py-1.5 md:py-3 text-charcoal bg-white/50 border border-charcoal/10 rounded-[13px] md:rounded-[22px] backdrop-blur-xl hover:bg-white/60 hover:border-charcoal/20 transition-all duration-500 shadow-lg active:scale-95"
         >
           Home
         </Link>
@@ -484,8 +534,59 @@ const MoodBoardV2Page: React.FC = () => {
       )}
 
       {viewMode === 'grid' && (
-        <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[140px] pb-24 px-6 md:px-12 pointer-events-auto">
-          <div className="max-w-[1600px] mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
+        <div className="absolute inset-0 w-full h-full overflow-y-auto pt-[120px] md:pt-[140px] pb-24 pointer-events-auto">
+
+          {/* ── MOBILE: 2-column masonry of images only (tap to expand) ──
+              Built as two explicit flex columns (top-aligned) rather than CSS
+              multicol — multicol's default column-fill:balance left the right
+              column not flush at the top, which read as a phantom shadow. */}
+          {mobileLayout === 'masonry' && (
+            <div className="md:hidden flex items-start gap-3 px-4">
+              {[0, 1].map((col) => (
+                <div key={col} className="flex-1 min-w-0 flex flex-col gap-3">
+                  {gridItems.filter((_, i) => i % 2 === col).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setExpandedItem(item)}
+                      className="block w-full p-0 bg-transparent border-0 outline-none appearance-none active:scale-[0.97] transition-transform duration-200"
+                      style={{
+                        // Directional shadow that sits *below* the tile so it
+                        // never haloes above the top edge. Lives here (not on the
+                        // clipped Squircle) so corner-smoothing can't clip it.
+                        borderRadius: 18,
+                        boxShadow: '0 10px 22px -12px rgba(0,0,0,0.22), 0 4px 8px -5px rgba(0,0,0,0.10)',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      <Squircle radius={18} className="block w-full">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-auto object-cover block"
+                        />
+                      </Squircle>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── MOBILE: single scrollable list of full cards (original) ── */}
+          {mobileLayout === 'list' && (
+            <div className="md:hidden px-6">
+              {gridItems.map((item) => (
+                <div key={item.id} className="w-full mb-6">
+                  <MoodBoardCard item={item} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── DESKTOP: full-card masonry ── */}
+          <div className="hidden md:block max-w-[1600px] mx-auto columns-2 lg:columns-3 xl:columns-4 gap-6 px-12">
             {gridItems.map((item) => (
               <div key={item.id} className="inline-block w-full break-inside-avoid mb-6">
                 <MoodBoardCard item={item} />
@@ -510,15 +611,18 @@ const MoodBoardV2Page: React.FC = () => {
               top: mousePos.y - 100,
             }}
           >
-            <img
-              src={hoveredItem.imageUrl}
-              alt={hoveredItem.title}
-              className="w-[260px] h-auto object-cover shadow-2xl"
-              style={{
-                borderRadius: '16px',
-                maxHeight: '200px',
-              }}
-            />
+            <Squircle
+              radius={16}
+              shadow="0 25px 50px -12px rgba(0,0,0,0.25)"
+              wrapperClassName="w-[260px]"
+            >
+              <img
+                src={hoveredItem.imageUrl}
+                alt={hoveredItem.title}
+                className="w-full h-auto object-cover block"
+                style={{ maxHeight: '200px' }}
+              />
+            </Squircle>
             <div className="mt-2 px-1">
               <span className="text-[11px] font-semibold text-charcoal/70">
                 {hoveredItem.title}
@@ -555,6 +659,43 @@ const MoodBoardV2Page: React.FC = () => {
             className="fixed bottom-6 left-6 z-40 w-[90vw] md:w-[420px]"
           >
             <MoodBoardCard item={selectedItem} isPopup={true} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ──── MOBILE EXPANDED IMAGE (tap masonry to expand) ──── */}
+      <AnimatePresence>
+        {expandedItem && (
+          <motion.div
+            key="mobile-expanded"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-[120] overflow-y-auto md:hidden"
+            onClick={() => setExpandedItem(null)}
+            style={{
+              // Darker, only lightly-blurred scrim: the grid stays visible
+              // behind the expanded card but recedes so the pane reads clearly.
+              background: 'rgba(22, 20, 17, 0.42)',
+              backdropFilter: 'blur(2px)',
+              WebkitBackdropFilter: 'blur(2px)',
+            }}
+          >
+            {/* Scroll happens on the padded backdrop so the card's shadow
+                isn't clipped and tall images never hard-cut at the top. */}
+            <div className="min-h-full flex items-center justify-center p-6">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 28 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 16 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+                className="w-full max-w-[430px]"
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              >
+                <MoodBoardCard item={expandedItem} isPopup={true} whiteText={true} refractive={true} />
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
