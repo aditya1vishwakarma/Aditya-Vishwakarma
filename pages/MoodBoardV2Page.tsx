@@ -820,6 +820,14 @@ const MoodBoardV2Page: React.FC = () => {
             key="mobile-expanded"
             className="fixed inset-0 z-[120] overflow-y-auto md:hidden"
             onClick={() => setExpandedItem(null)}
+            // This layer has no exit of its own, so AnimatePresence keeps it mounted
+            // until every *child* exit settles — and the card/close-chip springs run
+            // well past the scrim's 0.22s fade. Until then it's an invisible
+            // full-screen hit target that swallows the first scroll aimed at the grid
+            // (on iOS a swallowed touchstart kills the entire swipe, so the grid reads
+            // as frozen). Dropping pointer-events the moment closing starts hands
+            // input back immediately, while the visuals finish animating out.
+            exit={{ pointerEvents: 'none' }}
             // Keeps a drag inside the preview from chaining into the grid underneath,
             // so closing it returns you exactly where you left off.
             style={{ overscrollBehavior: 'contain' }}
