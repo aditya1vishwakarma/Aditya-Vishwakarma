@@ -497,16 +497,24 @@ const MoodBoardV2Page: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-screen overflow-hidden select-none"
-      style={{
-        background: PAGE_BG,
-        // Full-bleed: 100lvh is the viewport with Safari's chrome collapsed, so the
-        // layer stays edge to edge (content runs under the bars) instead of resizing
-        // as the toolbar shows and hides. h-screen would have been over-constrained
-        // against inset-0 anyway.
-        height: '100vh',
-        minHeight: '100lvh',
-      }}
+      /* Desktop keeps a fixed, non-scrolling shell — the WebGL ring needs a
+         viewport-sized stage and owns its own overflow. Mobile instead flows in the
+         normal document so the *page* scrolls, which is the only thing that lets iOS
+         Safari collapse its toolbar: a fixed overlay with an inner scroller never
+         scrolls the root, so the chrome stays pinned and a dead cream band opens under
+         it. min-height:100dvh keeps the cream filling the screen until content does. */
+      className={`select-none ${isMobile ? 'relative w-full' : 'fixed inset-0 w-screen overflow-hidden'}`}
+      style={isMobile
+        ? { background: PAGE_BG, minHeight: '100dvh' }
+        : {
+            background: PAGE_BG,
+            // Full-bleed: 100lvh is the viewport with Safari's chrome collapsed, so the
+            // layer stays edge to edge (content runs under the bars) instead of resizing
+            // as the toolbar shows and hides. h-screen would have been over-constrained
+            // against inset-0 anyway.
+            height: '100vh',
+            minHeight: '100lvh',
+          }}
       onMouseMove={handleMouseMove}
     >
       {/* SVG displacement filter for glass refraction (mounted once). */}
@@ -671,7 +679,17 @@ const MoodBoardV2Page: React.FC = () => {
       )}
 
       {viewMode === 'grid' && (
-        <div className="absolute inset-0 w-full h-full overflow-y-auto pointer-events-auto pt-[calc(120px_+_env(safe-area-inset-top))] md:pt-[calc(140px_+_env(safe-area-inset-top))] pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
+        <div
+          /* Mobile: a normal in-flow block — its height grows with the photos and the
+             document itself scrolls (toolbar collapses, no inner scroll region). Desktop:
+             an absolute, independently-scrolling pane inside the fixed shell. Both keep
+             the top pad that clears the fixed bar; mobile drops the old 6rem bottom pad,
+             which existed to survive the non-collapsing chrome and now just reads as
+             slack at the end of the page. */
+          className={isMobile
+            ? "relative w-full pointer-events-auto pt-[calc(120px_+_env(safe-area-inset-top))] pb-[calc(2rem_+_env(safe-area-inset-bottom))]"
+            : "absolute inset-0 w-full h-full overflow-y-auto pointer-events-auto pt-[calc(120px_+_env(safe-area-inset-top))] md:pt-[calc(140px_+_env(safe-area-inset-top))] pb-[calc(6rem_+_env(safe-area-inset-bottom))]"}
+        >
 
           {/* ── MOBILE: 2-column masonry of images only (tap to expand) ──
               Built as two explicit flex columns (top-aligned) rather than CSS
