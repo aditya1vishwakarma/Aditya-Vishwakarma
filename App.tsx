@@ -15,7 +15,7 @@ import Nostalgia from './pages/blog/Nostalgia';
 
 // Individual Project Pages
 import DJXProject from './pages/works/DJXProject';
-import Architextures from './pages/works/Architextures';
+import Placemarks from './pages/works/Placemarks';
 import SpacialMusic from './pages/works/SpacialMusic';
 import PhotoCaptions from './pages/works/PhotoCaptions';
 import AMDesktopRed from './pages/works/AMDesktopRed';
@@ -68,7 +68,7 @@ const App: React.FC = () => {
 
           {/* Project Routes */}
           <Route path="/works/djx-project" element={<DJXProject />} />
-          <Route path="/works/architextures" element={<Architextures />} />
+          <Route path="/works/placemarks" element={<Placemarks />} />
           <Route path="/works/SpacialMusic" element={<SpacialMusic />} />
           <Route path="/works/photo-captions" element={<PhotoCaptions />} />
           <Route path="/works/AMDesktopRed" element={<AMDesktopRed />} />

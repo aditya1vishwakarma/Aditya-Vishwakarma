@@ -3,10 +3,10 @@ import WritingLayout from '../../components/Writing/WritingLayout';
 import * as Prose from '../../components/Writing/Prose';
 const { Section, Lead, P, H2, H3, Bold, List, ListItem, Img, MediaGallery, Divider } = Prose;
 
-const Architextures = () => {
+const Placemarks = () => {
   return (
     <WritingLayout
-      title="Architextures"
+      title="Placemarks"
       category="iOS Development"
       date="June 2026"
       readTime="5 min read"
@@ -14,7 +14,7 @@ const Architextures = () => {
     >
       <Section>
         <Lead>
-          Architextures (working title) is an app for organizing the buildings and spaces that inspire you.
+          Placemarks (working title) is an app for organizing the buildings and spaces that inspire you.
         </Lead>
       </Section>
 
@@ -23,7 +23,7 @@ const Architextures = () => {
           The idea is simple. Take a photo of a building, write about what caught your eye, and the app suggests tags for its style, elements, and vibe; accept, reject, or add your own. Over time it becomes a visual journal of what you notice in the world around you!
         </P>
         <P>
-          Architextures is deliberately not a mood board. Pinterest is for collecting what other people made; the point with this app is to curate what <em>you</em> stood in front of. This distinction is what shaped the user experience. The app opens to a grid of photos you've added to it, and a persistent "+" button that opens the camera. Just in case though, can also import from your camera roll. This means that your library is most likely to be something you saw and chose to keep, not something you scrolled past and maybe saved. Much more intentional.
+          Placemarks is deliberately not a mood board. Pinterest is for collecting what other people made; the point with this app is to curate what <em>you</em> stood in front of. This distinction is what shaped the user experience. The app opens to a grid of photos you've added to it, and a persistent "+" button that opens the camera. Just in case though, can also import from your camera roll. This means that your library is most likely to be something you saw and chose to keep, not something you scrolled past and maybe saved. Much more intentional.
         </P>
 
         <MediaGallery
@@ -32,7 +32,7 @@ const Architextures = () => {
             {
               type: 'image',
               src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Home%20Page.jpg',
-              alt: 'Screenshot of the Architextures home grid',
+              alt: 'Screenshot of the Placemarks home grid',
               caption: "Current Home Page Layout.",
             },
             {
@@ -48,7 +48,7 @@ const Architextures = () => {
               caption: 'Detail View Page... polish still needed!',
             },
           ]}
-          caption="Early Architextures demos."
+          caption="Early Placemarks demos."
         />
 
         <H3>I went in with three goals in mind:</H3>
@@ -160,4 +160,4 @@ const Architextures = () => {
   );
 };
 
-export default Architextures;
+export default Placemarks;

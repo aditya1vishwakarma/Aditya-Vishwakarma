@@ -19,14 +19,14 @@ export const isMobileViewport = () =>
 export const PROJECTS: Project[] = [
   {
     id: '2',
-    title: 'Architextures',
+    title: 'Placemarks',
     category: 'iOS Development',
     description: 'An iOS app that photographs, classifies, and curates architecture using native platform frameworks.',
-    fullDescription: 'Architextures is my in-development iOS app that uses Apple\'s native Vision, SwiftData, AVFoundation, and MapKit frameworks to photograph and curate the world around me.',
-    imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/architextures.jpg',
+    fullDescription: 'Placemarks is my in-development iOS app that allows you to curate the architecture you see around you. Just take a photo of a building you like and the app will suggest tags related to the photo. The result is an extremely personal mood board that stays on your phone. It uses Apple\'s native Vision, SwiftData, AVFoundation, and MapKit frameworks.',
+    imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/placemarksbanner.jpg',
     date: 'June 2026',
     role: 'PM/ Developer',
-    path: '/works/architextures'
+    path: '/works/placemarks'
   },
   {
     id: '1',

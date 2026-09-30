@@ -12,7 +12,7 @@ const motion = motionComponent as any;
  * Each mask layer is transparent inside its circle and opaque outside, so compositing
  * them with intersect/source-in yields a hole at the UNION of the circles.
  *
- * Order is by measured cost — see public/mask-test.html, run on-device:
+ * Order is by measured cost — see devtools/mask-test.html, run on-device:
  *   webkit    one layer, three mask images. Fastest on iOS by a clear margin.
  *   intersect one layer, standards syntax. Correct everywhere modern, but slower on iOS.
  *   nested    three stacked masked elements. Universal, and ~3x the per-frame raster.
