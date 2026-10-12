@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import Home from './pages/Home';
 import Works from './pages/Works';
 import Blog from './pages/Blog';
-import MoodBoardV2Page from './pages/MoodBoardV2Page';
+import MoodBoardMuseumPage from './pages/MoodBoardMuseumPage';
 import Navbar from './components/Layout/Navbar';
 import Footer from './components/Layout/Footer';
 
@@ -20,7 +20,10 @@ import SpacialMusic from './pages/works/SpacialMusic';
 import PhotoCaptions from './pages/works/PhotoCaptions';
 import AMDesktopRed from './pages/works/AMDesktopRed';
 
-const { HashRouter, Routes, Route, useLocation } = ReactRouterDOM as any;
+const { HashRouter, Routes, Route, Navigate, useLocation } = ReactRouterDOM as any;
+
+/** The mood board's home. Its old addresses redirect here. */
+const MIND_MUSEUM = '/mindmuseum';
 
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
@@ -42,7 +45,7 @@ const ScrollToTop = () => {
 
 const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const isMoodBoard = location.pathname === '/moodboard' || location.pathname === '/moodboard-v2';
+  const isMoodBoard = location.pathname === MIND_MUSEUM;
 
   return (
     <div className="min-h-screen bg-background text-charcoal font-sans selection:bg-moss selection:text-white overflow-x-hidden">
@@ -64,7 +67,10 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/works" element={<Works />} />
           <Route path="/blog" element={<Blog />} />
-          <Route path="/moodboard" element={<MoodBoardV2Page />} />
+          <Route path={MIND_MUSEUM} element={<MoodBoardMuseumPage />} />
+          {/* Old addresses for the mood board, kept so existing links still land. */}
+          <Route path="/moodboard" element={<Navigate to={MIND_MUSEUM} replace />} />
+          <Route path="/moodboard-museum" element={<Navigate to={MIND_MUSEUM} replace />} />
 
           {/* Project Routes */}
           <Route path="/works/djx-project" element={<DJXProject />} />

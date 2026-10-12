@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Retired code: kept for reference, never built — so not scanned for classes. */
+@source not "./archive";
 
 /* Mobile/desktop boundary. 740 sits in the gap between the widest phone in
    portrait (440) plus phone-landscape stragglers (667, 736) and the narrowest

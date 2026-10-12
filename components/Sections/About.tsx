@@ -52,7 +52,7 @@ const About: React.FC = () => {
               title: "Mood Board",
               content: "A collection of artifacts, interfaces, and projects that define my aesthetic and standards. Curated inspiration.",
               isInteractive: true,
-              path: "/moodboard"
+              path: "/mindmuseum"
             }
           ].map((item, index) => (
             <motion.div
