@@ -25,8 +25,8 @@ export const pillClass = (theme: MuseumTheme, compact = false) =>
 
 /** Square, and as tall as the Home pill: full size, and the phone size the mood board uses. */
 export const buttonSize = (compact = false) => (compact ? 40 : 58);
-const CARET = { w: 20, h: 10 };
-const GAP = 12; // between the button and the card
+/** Between the button and the card — the same gap as between the two buttons on a phone. */
+const GAP = 8;
 
 interface Props {
   /** Hidden while a pane is out, as Home is. */
@@ -108,30 +108,6 @@ const ShelfAbout: React.FC<Props> = ({ visible, theme, compact = false }) => {
             className="absolute left-0 w-[min(380px,calc(100vw-2rem))]"
             style={{ top: BUTTON + GAP, transformOrigin: `${BUTTON / 2}px ${-GAP}px` }}
           >
-            {/* The caret, pointing back up at the button. Too small to need the
-                card's blur, so it's painted in the card's face colour instead, with
-                a hairline of shadow so it holds its edge against the cream wall. */}
-            <div
-              aria-hidden="true"
-              className="absolute"
-              style={{
-                left: BUTTON / 2 - CARET.w / 2,
-                top: -CARET.h + 0.5,
-                width: CARET.w,
-                height: CARET.h,
-                filter: 'drop-shadow(0 -0.5px 1.5px rgba(0,0,0,0.18))',
-              }}
-            >
-              <div
-                className="h-full w-full"
-                style={{
-                  background: theme.glassFace,
-                  clipPath: 'polygon(50% 0, 100% 100%, 0 100%)',
-                  WebkitClipPath: 'polygon(50% 0, 100% 100%, 0 100%)',
-                }}
-              />
-            </div>
-
             {/* The ring view's popup card, with its corners fully smoothed. */}
             <Squircle
               radius={28}

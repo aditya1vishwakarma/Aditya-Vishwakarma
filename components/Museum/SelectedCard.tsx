@@ -1,30 +1,16 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { animate } from 'framer-motion';
 import { MoveRight } from 'lucide-react';
 import type { MoodBoardItem } from '../../types';
 import { squirclePath } from '../UI/Squircle';
 import { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP } from './glass';
 import type { MuseumTheme } from './museumTheme';
-import {
-  CARD_PAD,
-  STACK_SAFE_BOTTOM,
-  STACK_TEXT_GUESS,
-  cardLayoutFor,
-  selectedRect,
-  stackedCardWidth,
-  type SelectedView,
-} from './selectedLayout';
+import { CARD_PAD, STACK_TEXT_PAD, cardGeometry, type CardGeometry, type SelectedView } from './selectedLayout';
 
 const PAD = CARD_PAD;
-/** The side card keeps at least this far from the right edge of the screen… */
-const RIGHT_MARGIN = 0.07;
-/** …and its text column is never wider than a comfortable line. */
-const TEXT_W = 480;
-/** Corner radii once fully open — the card's, and the photo's inside it. */
+/** Corner radii once fully open — the card's, and the photo's inside it (28 = 16 + the 12px margin). */
 const CARD_R = 28;
 const PHOTO_R = 16;
-/** Padding above and below the stacked card's text. */
-const STACK_TEXT_PAD = { top: 4, bottom: 16 };
 
 /** The panel sliding out from behind the photo, and folding back. */
 // A gentle ease-out: it starts unhurried and settles softly, rather than snapping open.
@@ -47,6 +33,112 @@ const smooth = (a: number, b: number, t: number) => {
   const k = Math.min(1, Math.max(0, (t - a) / (b - a)));
   return k * k * (3 - 2 * k);
 };
+
+/** No Escape key to mention on a touch screen. */
+const isTouchScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none)').matches;
+
+/* ─── The words ────────────────────────────────────────────────── */
+
+/** Title and description — shared by the card and its measurer, so they can't disagree. */
+const CardWords: React.FC<{ item: MoodBoardItem; theme: MuseumTheme }> = ({ item, theme }) => (
+  <>
+    <h2 className="font-serif text-[22px] font-semibold leading-tight tracking-tight md:text-[24px]" style={{ color: theme.text }}>
+      {item.title}
+    </h2>
+    <p className="mt-[5px] font-sans text-[15px] leading-snug" style={{ color: theme.textBody }}>
+      {item.description}
+    </p>
+  </>
+);
+
+const CardLinks = React.forwardRef<
+  HTMLDivElement,
+  { item: MoodBoardItem; theme: MuseumTheme; touch: boolean; onClose?: () => void }
+>(({ item, theme, touch, onClose }, ref) => (
+  <div ref={ref} className="flex shrink-0 items-baseline justify-between pt-4 font-serif text-[17px]">
+    {item.link ? (
+      <a
+        href={item.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group inline-flex items-center gap-1.5 transition-opacity hover:opacity-70"
+        style={{ color: theme.text }}
+      >
+        <span className="underline-offset-4 group-hover:underline">View source</span>
+        {/* Centred on the lowercase letters, not the line box — a hair above
+            the box's middle, so the arrowhead never dips below the baseline. */}
+        <MoveRight
+          aria-hidden="true"
+          size={16}
+          strokeWidth={1.3}
+          className="-translate-y-[0.5px] transition-transform duration-300 group-hover:translate-x-1"
+        />
+      </a>
+    ) : (
+      <span />
+    )}
+    <button type="button" onClick={onClose} className="transition-opacity hover:opacity-70" style={{ color: theme.textMuted }}>
+      Close{!touch && <span className="text-[14px] opacity-75"> (esc)</span>}
+    </button>
+  </div>
+));
+
+/**
+ * Lays the selected card out before it's shown: an invisible copy of its text
+ * is measured at the widths the card might take, and the photo is sized to
+ * the room that leaves. Mounted the moment a piece is chosen, so the pane
+ * already knows where it's flying to.
+ */
+export const CardMeasurer: React.FC<{
+  item: MoodBoardItem;
+  theme: MuseumTheme;
+  view: SelectedView;
+  aspect: number;
+  onGeometry: (id: string, geometry: CardGeometry) => void;
+}> = ({ item, theme, view, aspect, onGeometry }) => {
+  const box = useRef<HTMLDivElement>(null);
+  const touch = useMemo(isTouchScreen, []);
+
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const lay = () =>
+      onGeometry(
+        item.id,
+        cardGeometry(view, aspect, (cardWidth) => {
+          el.style.width = `${cardWidth}px`;
+          return el.offsetHeight;
+        }),
+      );
+    lay();
+    // If the web fonts weren't in yet, the wrap was measured in a fallback face; redo it.
+    let live = true;
+    document.fonts?.ready.then(() => live && lay());
+    return () => {
+      live = false;
+    };
+  }, [item, view.width, view.height, view.portrait, aspect, onGeometry]);
+
+  return (
+    <div
+      ref={box}
+      aria-hidden="true"
+      className="pointer-events-none fixed left-0 top-0"
+      style={{
+        visibility: 'hidden',
+        transform: 'translateX(-200vw)',
+        padding: `${STACK_TEXT_PAD.top}px ${STACK_TEXT_PAD.x}px ${STACK_TEXT_PAD.bottom}px`,
+      }}
+    >
+      <div>
+        <CardWords item={item} theme={theme} />
+      </div>
+      <CardLinks item={item} theme={theme} touch={touch} />
+    </div>
+  );
+};
+
+/* ─── The photo ────────────────────────────────────────────────── */
 
 /**
  * The photo, drawn flat from the pane's own texture so it sits exactly over
@@ -72,13 +164,14 @@ const CardImage: React.FC<{ source: CanvasImageSource | null; width: number; hei
   return <canvas ref={canvas} className="block h-full w-full" />;
 };
 
+/* ─── The card ─────────────────────────────────────────────────── */
+
 interface Props {
   item: MoodBoardItem;
   /** The best texture image to hand: the sharp copy once it's in, the shelf copy before. */
   source: CanvasImageSource | null;
-  /** The pane's own aspect (width / height) on the shelf. */
-  aspect: number;
-  view: SelectedView;
+  /** Where the photo and the card sit — from CardMeasurer. */
+  geometry: CardGeometry;
   /** Fold back behind the photo, then call onRetracted. */
   closing: boolean;
   onClose: () => void;
@@ -97,27 +190,8 @@ interface Props {
  * the photo's corners round off; closing runs the same move backwards. One
  * progress value drives all of it, written straight to the DOM each frame.
  */
-const SelectedCard: React.FC<Props> = ({ item, source, aspect, view, closing, onClose, onRetracted, theme }) => {
-  const stacked = cardLayoutFor(view) === 'stacked';
-  const img = selectedRect(view, aspect);
-
-  // The stacked card is as tall as its text needs, measured once it renders —
-  // down to the bottom of the screen, past which the description scrolls.
-  const [textH, setTextH] = useState(STACK_TEXT_GUESS);
-  const maxTextH = Math.max(120, view.height - STACK_SAFE_BOTTOM - (img.top + img.height + PAD));
-  const shownTextH = Math.min(textH, maxTextH);
-
-  const card = stacked
-    ? (() => {
-        const width = stackedCardWidth(view);
-        return { left: (view.width - width) / 2, top: img.top - PAD, width, height: img.height + PAD * 2 + shownTextH };
-      })()
-    : {
-        left: img.left - PAD,
-        top: img.top - PAD,
-        width: Math.min(view.width * (1 - RIGHT_MARGIN) - (img.left - PAD), img.width + PAD * 2 + TEXT_W),
-        height: img.height + PAD * 2,
-      };
+const SelectedCard: React.FC<Props> = ({ item, source, geometry, closing, onClose, onRetracted, theme }) => {
+  const { stacked, img, card, textH } = geometry;
   // Where the photo sits inside the card.
   const photoX = img.left - card.left;
   const photoY = img.top - card.top;
@@ -128,21 +202,8 @@ const SelectedCard: React.FC<Props> = ({ item, source, aspect, view, closing, on
   const photo = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  const links = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
-
-  // No Escape key to mention on a touch screen.
-  const touch = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none)').matches, []);
-
-  useLayoutEffect(() => {
-    if (!stacked || !content.current || !links.current) return;
-    // The words themselves, not the box they scroll in — that only ever grows to fit.
-    const natural = content.current.offsetHeight + links.current.offsetHeight + STACK_TEXT_PAD.top + STACK_TEXT_PAD.bottom;
-    if (Math.abs(natural - textH) > 0.5) setTextH(natural);
-    // Re-measure when the text or its width changes, not when the height we set does.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stacked, item, view.width, view.height, img.width]);
+  const touch = useMemo(isTouchScreen, []);
 
   const apply = useCallback(
     (t: number) => {
@@ -182,8 +243,8 @@ const SelectedCard: React.FC<Props> = ({ item, source, aspect, view, closing, on
     [stacked, photoX, photoY, img.width, img.height, card.width, card.height, card.left, card.top],
   );
 
-  // Keep the current pose if the window resizes (or the text is measured) mid-move —
-  // and let a move already under way pick up the new shape on its next frame.
+  // Keep the current pose if the window resizes mid-move — and let a move
+  // already under way pick up the new shape on its next frame.
   const applyRef = useRef(apply);
   applyRef.current = apply;
   useLayoutEffect(() => apply(progress.current), [apply]);
@@ -275,8 +336,8 @@ const SelectedCard: React.FC<Props> = ({ item, source, aspect, view, closing, on
                   left: 0,
                   right: 0,
                   top: img.height + PAD * 2,
-                  height: shownTextH,
-                  padding: `${STACK_TEXT_PAD.top}px 22px ${STACK_TEXT_PAD.bottom}px`,
+                  height: textH,
+                  padding: `${STACK_TEXT_PAD.top}px ${STACK_TEXT_PAD.x}px ${STACK_TEXT_PAD.bottom}px`,
                   opacity: 0,
                 }
               : { left: img.width + PAD * 2, top: PAD, right: 0, bottom: PAD, padding: '12px 30px 6px 20px', opacity: 0 }
@@ -287,42 +348,11 @@ const SelectedCard: React.FC<Props> = ({ item, source, aspect, view, closing, on
             className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${stacked ? 'justify-start' : 'justify-center'}`}
             style={{ overscrollBehavior: 'contain' }}
           >
-            <div ref={content}>
-              <h2 className="font-serif text-[22px] font-semibold leading-tight tracking-tight md:text-[24px]" style={{ color: theme.text }}>
-                {item.title}
-              </h2>
-              <p className="mt-[5px] font-sans text-[15px] leading-snug" style={{ color: theme.textBody }}>
-                {item.description}
-              </p>
+            <div>
+              <CardWords item={item} theme={theme} />
             </div>
           </div>
-
-          <div ref={links} className="flex shrink-0 items-baseline justify-between pt-4 font-serif text-[17px]">
-            {item.link ? (
-              <a
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-1.5 transition-opacity hover:opacity-70"
-                style={{ color: theme.text }}
-              >
-                <span className="underline-offset-4 group-hover:underline">View source</span>
-                {/* Centred on the lowercase letters, not the line box — a hair above
-                    the box's middle, so the arrowhead never dips below the baseline. */}
-                <MoveRight
-                  aria-hidden="true"
-                  size={16}
-                  strokeWidth={1.3}
-                  className="-translate-y-[0.5px] transition-transform duration-300 group-hover:translate-x-1"
-                />
-              </a>
-            ) : (
-              <span />
-            )}
-            <button type="button" onClick={onClose} className="transition-opacity hover:opacity-70" style={{ color: theme.textMuted }}>
-              Close{!touch && <span className="text-[14px] opacity-75"> (esc)</span>}
-            </button>
-          </div>
+          <CardLinks item={item} theme={theme} touch={touch} onClose={onClose} />
         </div>
 
         {/* Frost grain over the whole pane at 7%, as on the ring's cards. */}

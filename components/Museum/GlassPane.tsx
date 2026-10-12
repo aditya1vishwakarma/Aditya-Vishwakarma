@@ -3,7 +3,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { MoodBoardItem } from '../../types';
 import { CAMERA, PANE, SELECT } from './museumConfig';
-import { selectedRect } from './selectedLayout';
+import { cardGeometry } from './selectedLayout';
 import type { PanePlacement } from './museumLayout';
 import { CASE_LIGHT_GLSL, type CaseLightUniforms } from './museumMaterials';
 import type { MuseumAssets } from './useMuseumAssets';
@@ -278,7 +278,9 @@ const GlassPane: React.FC<Props> = ({
       const cam = three.camera as THREE.PerspectiveCamera;
       const visH = 2 * SELECT.distance * Math.tan(((CAMERA.fov / 2) * Math.PI) / 180);
       const perPx = visH / view.height; // world metres per CSS px, at the pane's resting depth
-      const rect = selectedRect(view, p.w / p.h);
+      // The card's own layout once it's measured; a close estimate for the frame before.
+      const laid = rig.current.selected;
+      const rect = laid?.id === p.item.id ? laid.geometry.img : cardGeometry(view, p.w / p.h).img;
       const k = (rect.width * perPx) / p.w;
       const cx = (rect.left + rect.width / 2 - view.width / 2) * perPx;
       const cy = (view.height / 2 - (rect.top + rect.height / 2)) * perPx;

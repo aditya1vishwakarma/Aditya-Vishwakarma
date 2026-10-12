@@ -23,8 +23,6 @@ export interface MuseumTheme {
   textMuted: string;
   /** Frosted glass for the popover and the selected card. */
   glass: string;
-  /** The glass as it renders over this wall — for the popover's solid caret. */
-  glassFace: string;
   /** The glass's bevelled rim: a highlight along the top, a little depth below. */
   glassEdge: string;
   /** The frosted pill behind Home, the info button and this toggle. */
@@ -47,7 +45,6 @@ export const THEMES: Record<ThemeMode, MuseumTheme> = {
     textBody: '#847D72',
     textMuted: 'rgba(51, 51, 51, 0.45)',
     glass: 'rgba(251, 250, 248, 0.60)',
-    glassFace: '#FBF6EF',
     // The ring view's GLASS_EDGE.
     glassEdge: 'inset 0 1px 1px rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 -12px 26px -20px rgba(0,0,0,0.22)',
     pill: 'border-charcoal/10 bg-white/50 text-charcoal hover:border-charcoal/20 hover:bg-white/60',
@@ -66,7 +63,6 @@ export const THEMES: Record<ThemeMode, MuseumTheme> = {
     textBody: 'rgba(243, 237, 226, 0.68)',
     textMuted: 'rgba(243, 237, 226, 0.45)',
     glass: 'rgba(38, 42, 49, 0.62)',
-    glassFace: '#2E333A',
     // Same rim, turned down — at full strength it reads as a white border on slate.
     glassEdge: 'inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 -12px 26px -20px rgba(0,0,0,0.45)',
     pill: 'border-white/10 bg-[#2A2F36]/60 text-[#F3EDE2] hover:border-white/20 hover:bg-[#2A2F36]/75',

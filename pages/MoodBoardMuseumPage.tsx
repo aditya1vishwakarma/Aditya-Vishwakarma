@@ -8,7 +8,8 @@ import type { MoodBoardItem } from '../types';
 import MuseumScene from '../components/Museum/MuseumScene';
 import MuseumSlider from '../components/Museum/MuseumSlider';
 import ShelfAbout from '../components/Museum/ShelfAbout';
-import SelectedCard from '../components/Museum/SelectedCard';
+import SelectedCard, { CardMeasurer } from '../components/Museum/SelectedCard';
+import type { CardGeometry } from '../components/Museum/selectedLayout';
 import ThemeToggle from '../components/Museum/ThemeToggle';
 import { pillClass } from '../components/Museum/ShelfAbout';
 import { THEMES, storedTheme, storeTheme, type ThemeMode } from '../components/Museum/museumTheme';
@@ -78,6 +79,7 @@ const MuseumRoom: React.FC = () => {
     maxX: 0,
     view: computeView(window.innerWidth, window.innerHeight),
     shadowDirty: true,
+    selected: null,
   });
   const [view, setViewState] = useState<MuseumView | null>(null);
   // Only a real change of window size is news; the same view again must not re-render the page.
@@ -145,7 +147,23 @@ const MuseumRoom: React.FC = () => {
     setSelected(null);
     setCovered(false);
     setClosing(false);
+    setGeometry(null);
+    rig.current.selected = null;
   }, []);
+
+  // The card is laid out (its text measured) the moment a piece is chosen, so
+  // its pane flies straight to where the photo will sit in it.
+  const [geometry, setGeometry] = useState<{ id: string; geometry: CardGeometry } | null>(null);
+  const laidOut = useCallback((id: string, g: CardGeometry) => {
+    rig.current.selected = { id, geometry: g };
+    rig.current.shadowDirty = true;
+    setGeometry({ id, geometry: g });
+    invalidate();
+  }, []);
+  const selectedAspect = (() => {
+    const p = selected && layout?.panes.find((q) => q.item.id === selected.id);
+    return p ? p.w / p.h : 4 / 3;
+  })();
 
   // Once a pane is back on its shelf, drop its sharp copy.
   const returned = useCallback(
@@ -445,8 +463,11 @@ const MuseumRoom: React.FC = () => {
       </div>
 
       {/* ──── SELECTED: one card — text beside the photo, or under it when upright ──── */}
+      {selected && !closing && (
+        <CardMeasurer item={selected} theme={theme} view={view ?? rig.current.view} aspect={selectedAspect} onGeometry={laidOut} />
+      )}
       <AnimatePresence>
-        {selected && covered && layout && (
+        {selected && covered && layout && geometry?.id === selected.id && (
           <motion.div
             key="selected"
             className="absolute inset-0 z-30"
@@ -462,11 +483,7 @@ const MuseumRoom: React.FC = () => {
               source={
                 ((detail?.id === selected.id ? detail.texture : textures.get(selected.imageUrl)?.texture)?.image as CanvasImageSource | undefined) ?? null
               }
-              aspect={(() => {
-                const p = layout.panes.find((q) => q.item.id === selected.id);
-                return p ? p.w / p.h : 4 / 3;
-              })()}
-              view={view ?? rig.current.view}
+              geometry={geometry.geometry}
               closing={closing}
               onClose={close}
               onRetracted={retracted}

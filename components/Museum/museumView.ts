@@ -1,5 +1,6 @@
 import { MOBILE_MAX } from '../../constants';
 import { CAMERA, FRAME } from './museumConfig';
+import type { CardGeometry } from './selectedLayout';
 
 /**
  * Where the camera stands, worked out from the window size.
@@ -90,6 +91,8 @@ export interface MuseumRig {
   view: MuseumView;
   /** Something that casts a shadow moved this frame; redraw the shadow map. */
   shadowDirty: boolean;
+  /** The selected piece's card, laid out — where its pane flies to. */
+  selected: { id: string; geometry: CardGeometry } | null;
 }
 
 export const clampRig = (rig: MuseumRig, x: number) => Math.min(rig.maxX, Math.max(rig.minX, x));
