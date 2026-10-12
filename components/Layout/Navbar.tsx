@@ -73,7 +73,7 @@ const Navbar: React.FC = () => {
                   <Link
                     key={item.label}
                     to={item.path}
-                    className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-colors ${location.pathname === item.path ? 'text-moss' : 'text-charcoal/40 hover:text-charcoal'}`}
+                    className={`font-serif text-xs uppercase tracking-[0.2em] transition-colors ${location.pathname === item.path ? 'text-moss' : 'text-charcoal/40 hover:text-charcoal'}`}
                   >
                     {item.label}
                   </Link>
@@ -81,7 +81,7 @@ const Navbar: React.FC = () => {
                 <div className="w-[1px] h-3 bg-charcoal/10" />
                 <button
                   onClick={handleContactClick}
-                  className="text-[10px] uppercase tracking-[0.2em] font-bold text-charcoal/40 hover:text-moss transition-colors"
+                  className="font-serif text-xs uppercase tracking-[0.2em] text-charcoal/40 hover:text-moss transition-colors"
                 >
                   Contact
                 </button>
@@ -113,7 +113,7 @@ const Navbar: React.FC = () => {
                 <Link
                   key={item.label}
                   to={item.path}
-                  className={`font-serif text-5xl transition-all duration-300 ${location.pathname === item.path ? 'text-moss' : 'text-charcoal'}`}
+                  className={`font-serif uppercase tracking-wide text-4xl transition-all duration-300 ${location.pathname === item.path ? 'text-moss' : 'text-charcoal'}`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.label}
@@ -123,7 +123,7 @@ const Navbar: React.FC = () => {
                 <div className="w-12 h-[1px] bg-charcoal/10" />
                 <button
                   onClick={handleContactClick}
-                  className="text-sm uppercase tracking-[0.3em] text-charcoal/60 hover:text-moss transition-colors font-bold"
+                  className="font-serif text-lg uppercase tracking-[0.2em] text-charcoal/60 hover:text-moss transition-colors"
                 >
                   Contact
                 </button>
