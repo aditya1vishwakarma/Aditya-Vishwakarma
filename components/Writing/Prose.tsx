@@ -200,9 +200,10 @@ interface MediaGalleryProps extends BleedableProps {
   caption?: string;
   /**
    * Slide frame shape. 'portrait' (default) is a fixed 600px-tall frame;
-   * 'landscape' is a 16:10 frame sized for wide screenshots.
+   * 'landscape' is a 16:10 frame sized for wide screenshots;
+   * 'square' is a 1:1 frame for square photos.
    */
-  orientation?: 'portrait' | 'landscape';
+  orientation?: 'portrait' | 'landscape' | 'square';
   /**
    * Slide alignment. 'center' (default) centers each slide with neighbours
    * peeking on both sides; 'start' lines slides up with the text's left edge
@@ -223,7 +224,9 @@ interface MediaGalleryProps extends BleedableProps {
 export const MediaGallery: React.FC<MediaGalleryProps> = ({
   items, caption, bleed, orientation = 'portrait', align = 'center', className = ''
 }) => {
-  const frameSize = orientation === 'landscape' ? 'aspect-[16/10]' : 'h-[600px]';
+  const frameSize = orientation === 'landscape' ? 'aspect-[16/10]'
+    : orientation === 'square' ? 'aspect-square'
+    : 'h-[600px]';
   const alignStart = align === 'start';
   const scrollRef = useRef<HTMLDivElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);

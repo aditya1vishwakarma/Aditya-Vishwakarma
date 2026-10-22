@@ -106,6 +106,16 @@ export const PROJECT_COUNT = PROJECTS.filter((p) => !p.isRedirect).length;
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    id: '4',
+    title: 'Learning App Icon Design',
+    date: 'October 2026',
+    readTime: '3 min read',
+    category: 'Design',
+    excerpt: 'How I designed my first app icon for Placemarks, from a hill and a library to a single brutalist shape.',
+    path: '/blog/app-icon-design',
+    content: `I've never created a logo before. Let alone an app icon.`
+  },
+  {
     id: '2',
     title: 'On Curation',
     date: 'Random Note, 2025',

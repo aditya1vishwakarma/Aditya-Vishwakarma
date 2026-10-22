@@ -12,6 +12,7 @@ import Footer from './components/Layout/Footer';
 // Individual Blog Posts
 import Curation from './pages/blog/Curation';
 import Nostalgia from './pages/blog/Nostalgia';
+import AppIconDesign from './pages/blog/AppIconDesign';
 
 // Individual Project Pages
 import DJXProject from './pages/works/DJXProject';
@@ -84,6 +85,7 @@ const App: React.FC = () => {
           {/* Blog Routes */}
           <Route path="/blog/curation" element={<Curation />} />
           <Route path="/blog/nostalgia" element={<Nostalgia />} />
+          <Route path="/blog/app-icon-design" element={<AppIconDesign />} />
         </Routes>
       </LayoutWrapper>
     </HashRouter>
