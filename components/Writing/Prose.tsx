@@ -198,6 +198,17 @@ interface MediaGalleryProps extends BleedableProps {
   items: MediaItem[];
   /** Gallery-level caption rendered below the carousel. */
   caption?: string;
+  /**
+   * Slide frame shape. 'portrait' (default) is a fixed 600px-tall frame;
+   * 'landscape' is a 16:10 frame sized for wide screenshots.
+   */
+  orientation?: 'portrait' | 'landscape';
+  /**
+   * Slide alignment. 'center' (default) centers each slide with neighbours
+   * peeking on both sides; 'start' lines slides up with the text's left edge
+   * at 75% of its width, so only the next slide peeks in.
+   */
+  align?: 'center' | 'start';
 }
 
 /**
@@ -210,8 +221,10 @@ interface MediaGalleryProps extends BleedableProps {
  * - Videos are rendered inline with native controls; they do not open a lightbox.
  */
 export const MediaGallery: React.FC<MediaGalleryProps> = ({
-  items, caption, bleed, className = ''
+  items, caption, bleed, orientation = 'portrait', align = 'center', className = ''
 }) => {
+  const frameSize = orientation === 'landscape' ? 'aspect-[16/10]' : 'h-[600px]';
+  const alignStart = align === 'start';
   const scrollRef = useRef<HTMLDivElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -266,7 +279,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     );
     const card = cards[idx];
     if (!card) return;
-    el.scrollTo({ left: card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2, behavior: 'smooth' });
+    const left = alignStart
+      ? card.offsetLeft
+      : card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2;
+    el.scrollTo({ left, behavior: 'smooth' });
   };
 
   // ── Lightbox helpers ───────────────────────────────────────────
@@ -339,18 +355,22 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           <div
             ref={scrollRef}
             data-media-gallery-scroll
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-[12.5%]"
+            className={`flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth ${alignStart ? '' : 'px-[12.5%]'}`}
             style={{ scrollbarWidth: 'none' }}
           >
             <style>{`[data-media-gallery-scroll]::-webkit-scrollbar { display: none; }`}</style>
             {items.map((item, i) => (
               <div
                 key={i}
-                className="snap-center shrink-0"
-                style={{ width: items.length === 1 ? '100%' : 'clamp(280px, 75%, 720px)' }}
+                className={`${alignStart ? 'snap-start' : 'snap-center'} shrink-0`}
+                style={{
+                  width: items.length === 1 ? '100%'
+                    : alignStart ? '75%'
+                    : 'clamp(280px, 75%, 720px)',
+                }}
               >
                 {item.type === 'video' ? (
-                  <div className="relative h-[600px] overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center">
+                  <div className={`relative ${frameSize} overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center`}>
                     <video
                       src={item.src}
                       controls
@@ -368,7 +388,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     onClick={() => openLightbox(i)}
                     className="block w-full text-left cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/40"
                   >
-                    <div className="relative h-[600px] overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center">
+                    <div className={`relative ${frameSize} overflow-hidden shadow-md border border-charcoal/10 bg-charcoal/5 flex items-center justify-center`}>
                       <img
                         src={item.src}
                         alt={item.alt || ''}

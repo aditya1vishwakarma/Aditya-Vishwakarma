@@ -10,6 +10,7 @@ export interface Project {
   role: string;
   path: string; // Added to match Blog structure
   isRedirect?: boolean; // Card that links elsewhere on the site, not a project itself
+  isSelected?: boolean; // Listed under Selected Works on /works
 }
 
 export interface BlogPost {

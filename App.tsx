@@ -19,6 +19,7 @@ import Placemarks from './pages/works/Placemarks';
 import SpacialMusic from './pages/works/SpacialMusic';
 import PhotoCaptions from './pages/works/PhotoCaptions';
 import AMDesktopRed from './pages/works/AMDesktopRed';
+import LocallyHostedApps from './pages/works/LocallyHostedApps';
 
 const { HashRouter, Routes, Route, Navigate, useLocation } = ReactRouterDOM as any;
 
@@ -78,6 +79,7 @@ const App: React.FC = () => {
           <Route path="/works/SpacialMusic" element={<SpacialMusic />} />
           <Route path="/works/photo-captions" element={<PhotoCaptions />} />
           <Route path="/works/AMDesktopRed" element={<AMDesktopRed />} />
+          <Route path="/works/locally-hosted-apps" element={<LocallyHostedApps />} />
 
           {/* Blog Routes */}
           <Route path="/blog/curation" element={<Curation />} />

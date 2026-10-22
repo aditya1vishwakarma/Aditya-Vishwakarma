@@ -5,11 +5,8 @@ import ProjectTile from '../components/UI/ProjectTile';
 import ArchivedProjectItem from '../components/UI/ArchivedProjectItem';
 
 const Works: React.FC = () => {
-  // For demonstration, we'll use all projects as "Selected" 
-  // and a subset as "Archived" to populate both sections.
-  // In a real app, you'd likely have a property like 'isArchived' on the project type.
-  const selectedProjects = PROJECTS.slice(0, 2);
-  const archivedProjects = PROJECTS.slice(3); // Skip the first 3 (2 selected + 1 carousel link card)
+  const selectedProjects = PROJECTS.filter((p) => p.isSelected);
+  const archivedProjects = PROJECTS.filter((p) => !p.isSelected && !p.isRedirect);
 
   return (
     <motion.div

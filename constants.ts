@@ -26,7 +26,8 @@ export const PROJECTS: Project[] = [
     imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/placemarksbanner.jpg',
     date: 'June 2026',
     role: 'PM/ Developer',
-    path: '/works/placemarks'
+    path: '/works/placemarks',
+    isSelected: true
   },
   {
     id: '1',
@@ -37,7 +38,8 @@ export const PROJECTS: Project[] = [
     imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/djx.jpg',
     date: 'March 2026',
     role: 'Product Manager',
-    path: '/works/djx-project'
+    path: '/works/djx-project',
+    isSelected: true
   },
   {
     id: '3',
@@ -45,11 +47,24 @@ export const PROJECTS: Project[] = [
     category: 'Archive',
     description: 'A collection of ideas that I couldn\'t vouch for, but are still worth sharing.',
     fullDescription: 'These are ideas that I had for a product or feature, but upon further exploration, I found that I couldn\'t vouch for them for one reason or another.',
-    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200', // Placeholder image, feel free to change
-    date: 'Various',
-    role: 'Explorer',
+    imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/unselected.avif',
+    date: 'N/a',
+    role: 'Myself',
     path: '/works#unselected-works',
     isRedirect: true
+  },
+  // Sits after the first three so it stays out of the home carousel.
+  {
+    id: '6',
+    title: 'Locally Hosted Apps',
+    category: 'Self-Hosting',
+    description: 'Running small, personal apps on my own NAS with TrueNAS, Pi-Hole, and Tailscale instead of the cloud.',
+    fullDescription: 'Why I host light, personal apps on my own TrueNAS server, and how Pi-Hole DNS and Tailscale let me reach them from anywhere.',
+    imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/LocallyHosted.avif',
+    date: 'October 2026',
+    role: 'Myself',
+    path: '/works/locally-hosted-apps',
+    isSelected: true
   },
   {
     id: '4',
