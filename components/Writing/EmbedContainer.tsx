@@ -59,7 +59,7 @@ const EmbedContainer: React.FC<EmbedContainerProps> = ({
       {/* Facade layer */}
       {!isInteractive && previewImage && (
         <div className="absolute inset-0 z-10 cursor-pointer group">
-          <img src={previewImage} alt={`Preview of ${title}`} className="w-full h-full object-cover" />
+          <img src={previewImage} alt={`Preview of ${title}`} decoding="async" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-charcoal/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="bg-background/80 backdrop-blur-md px-6 py-3 rounded-full text-charcoal font-sans text-sm font-bold uppercase tracking-widest shadow-lg">
               Load Interactive Embed

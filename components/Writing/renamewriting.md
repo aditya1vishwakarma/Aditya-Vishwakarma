@@ -21,27 +21,27 @@ const KeepVibe = () => { // formerly DJXProject
 export default KeepVibe; // formerly DJXProject
 ```
 
-### 3. Update the Routes in `App.tsx`
-Your application needs to know how to route users to this new file. Open your `App.tsx` file and update the import path and the defined `<Route>`.
+### 3. Update the address in `components/Home/routes.tsx`
+The site is one page, and every project and post opens in its pane by its address. Open `components/Home/routes.tsx`, update the import, and update its entry in `PIECES` — its address, and the section whose list it's in (`'work'` or `'writing'`).
 
 ```tsx
-// 1. Change the import at the top of App.tsx
-import KeepVibe from './pages/works/KeepVibe';
+// 1. Change the import at the top of routes.tsx
+import KeepVibe from '../../pages/works/KeepVibe';
 
 // ... deeper in the file ...
 
-// 2. Change the Route in the <Routes> block
-<Route path="/works/keep-vibe" element={<KeepVibe />} />
+// 2. Change its entry in PIECES
+'/works/keep-vibe': { section: 'work', Page: KeepVibe },
 ```
 
-### 4. Update the link in your Project Grid (`constants.ts`)
-If this project/blog is shown on your main `/works` or `/blog` index pages, find its entry in your `constants.ts` file and update the `link` property so users clicking the tile are directed to the right place:
+### 4. Update the link in its list (`constants.ts`)
+The Work and Writing panes list what's in `PROJECTS` and `BLOG_POSTS`. Find its entry in `constants.ts` and update the `path` property so a click on it opens the right piece:
 
 ```typescript
 { 
   title: 'Keep Vibe App', 
   // ... other properties
-  link: '/works/keep-vibe' // Update this string to match the Route path from Step 3
+  path: '/works/keep-vibe' // Update this string to match the address from Step 3
 }
 ```
 

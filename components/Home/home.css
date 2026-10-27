@@ -1,0 +1,251 @@
+/*
+ * The home hero's type, set over the maple scene. Positions along the bottom
+ * are worked out in HomeHero.tsx, from each block's real last baseline; what's
+ * here is the type itself, its haze, and how it comes and goes.
+ */
+
+.hero-name,
+.hero-title {
+  position: fixed;
+  z-index: 20;
+  margin: 0;
+  color: #fbfaf8;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.7s ease 0.2s, visibility 0s;
+}
+
+.hero-name {
+  left: var(--hero-m);
+  font-family: 'Newsreader', serif;
+  font-weight: 400;
+  /*
+   * A tenth of the screen's width, and never more than a quarter of its height, so a screen held sideways keeps its sky.
+   * --fit sets it smaller where it wouldn't fit beside the title (HomeHero.tsx).
+   */
+  font-size: calc(min(10vw, 24vh) * var(--fit, 1));
+  line-height: 0.9;
+  text-shadow: var(--hero-name-shadow);
+}
+
+.hero-title {
+  right: var(--hero-m);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  /* By the screen's shorter side, so it keeps its size against the name whichever way the screen is held. */
+  font-size: calc(clamp(15px, 2.8vmin, 24px) * var(--fit, 1));
+  line-height: 1.8;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: right;
+  text-shadow: var(--hero-title-shadow);
+}
+
+.hero-name [data-line],
+.hero-title [data-line] {
+  display: block;
+}
+
+/* Tracking adds space after the last letter too; hang it past the margin, so the letters themselves end on it. */
+.hero-title [data-line] {
+  margin-right: -0.2em;
+}
+
+/* A point on the last line's baseline, to measure the block by. */
+.hero-baseline {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: baseline;
+}
+
+/*
+ * A narrow screen: the name at the width of the screen, short of a fifth of
+ * its height, and the title above it, flush left. A phone held sideways sets
+ * them as a desktop does, at its own size, clear of the tree.
+ */
+@media (width < 740px) {
+  .hero-name {
+    font-size: clamp(2.75rem, min(15vw, 18vh), 7rem);
+  }
+
+  .hero-title {
+    left: var(--hero-m);
+    right: auto;
+    font-size: clamp(13px, 4vmin, 17px);
+    letter-spacing: 0.18em;
+    text-align: left;
+  }
+}
+
+/* While a pane is open the type steps away, and leaves the haze nothing to sit behind. */
+.hero-name[data-shown='false'],
+.hero-title[data-shown='false'] {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+
+.hero-haze {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  /* Fades by its blur and its tint, never its opacity: frosted glass under a fade paints white in Safari. */
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  background-color: rgba(16, 32, 20, 0);
+  visibility: hidden;
+  transition:
+    backdrop-filter 0.6s ease,
+    -webkit-backdrop-filter 0.6s ease,
+    background-color 0.6s ease,
+    visibility 0s linear 0.6s;
+}
+
+.hero-haze[data-on='true'] {
+  backdrop-filter: blur(var(--hero-haze-blur));
+  -webkit-backdrop-filter: blur(var(--hero-haze-blur));
+  background-color: var(--haze-tint);
+  visibility: visible;
+  transition:
+    backdrop-filter 1.2s ease 0.15s,
+    -webkit-backdrop-filter 1.2s ease 0.15s,
+    background-color 1.2s ease 0.15s,
+    visibility 0s;
+}
+
+/*
+ * Coming in: each line written on from the left, a soft edge sweeping across
+ * it as it sharpens out of a blur. A mask rather than a letter at a time, so
+ * the name keeps its kerning.
+ */
+.hero[data-stage='waiting'] .hero-reveal {
+  opacity: 0;
+}
+
+.hero[data-stage='in'] .hero-reveal {
+  mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  mask-size: 300% 100%;
+  -webkit-mask-size: 300% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  animation: hero-write 1.7s cubic-bezier(0.22, 0.61, 0.36, 1) var(--delay, 0s) both;
+}
+
+@keyframes hero-write {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    mask-position: 100% 0;
+    -webkit-mask-position: 100% 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    mask-position: 0 0;
+    -webkit-mask-position: 0 0;
+  }
+}
+
+.hero-nav-in {
+  animation: hero-arrive 1.1s cubic-bezier(0.16, 1, 0.3, 1) 1.05s both;
+}
+
+/* Scale and lift only: the nav is frosted glass, which mustn't sit under a fade. */
+@keyframes hero-arrive {
+  from {
+    transform: translateY(-10px) scale(0.97);
+    visibility: hidden;
+  }
+  1% {
+    visibility: visible;
+  }
+  to {
+    transform: none;
+    visibility: visible;
+  }
+}
+
+/*
+ * A pane's scrollbar, when it has one: a thin pebble with no track, inset
+ * from the rounded corners, so it reads as part of the glass rather than a
+ * white strip down its side.
+ */
+.pane-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(51, 51, 51, 0.24) transparent;
+}
+
+/* A list with a rail of its parts in place of a scrollbar: still scrolled by wheel, touch and keys. */
+.pane-scroll[data-rail] {
+  scrollbar-width: none;
+}
+
+.pane-scroll[data-rail]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safari, which knows only these. (Chrome and Firefox take the two above, and ignore these.) */
+.pane-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.pane-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 30px;
+}
+
+.pane-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(51, 51, 51, 0.24);
+  background-clip: padding-box;
+  border: 4px solid transparent;
+  border-radius: 999px;
+}
+
+.pane-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(51, 51, 51, 0.38);
+}
+
+/* The scene fades up over the painted meadow behind it once it's drawn. */
+.hero-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+.hero-scene[data-ready='true'] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero[data-stage] .hero-reveal,
+  .hero-nav-in {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .hero-name,
+  .hero-title,
+  .hero-haze,
+  .hero-haze[data-on='true'],
+  .hero-scene {
+    transition: none;
+  }
+
+  /* The nav goes up out of the way, and comes back, at once. */
+  .hero nav[aria-label='Sections'] {
+    transition: none !important;
+  }
+}

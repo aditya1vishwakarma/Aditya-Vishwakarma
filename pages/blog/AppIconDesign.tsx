@@ -10,7 +10,6 @@ const AppIconDesign = () => {
       category="Design"
       date="October 2026"
       readTime="3 min read"
-      backLink={{ path: '/blog', label: 'Back to Journal' }}
     >
       <Section>
         <Lead>

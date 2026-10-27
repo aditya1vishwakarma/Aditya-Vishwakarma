@@ -9,7 +9,6 @@ const SpacialMusic = () => {
       category="Product Manager"
       date="May 2026"
       readTime="3 min read"
-      backLink={{ path: '/works', label: 'Back to Works' }}
     >
       <Section className="mb-8">
         <H2>Ideation</H2>

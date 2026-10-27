@@ -1,0 +1,56 @@
+/*
+ * The old site's utility classes, moved out of index.css once nothing used them: the fluid type sizes other
+ * than .fluid-text-lg (still live, for an article's body), the editorial grid's bleed classes (Prose sets
+ * its own bleeds now), and the float helpers for wrapping text round a picture. To bring one back, move it
+ * into index.css's @layer utilities.
+ */
+
+@layer utilities {
+    /* Fluid typography rules using clamp */
+    .fluid-text-base { font-size: clamp(1rem, 0.95vw + 0.8rem, 1.125rem); }
+    .fluid-text-xl { font-size: clamp(1.25rem, 1.5vw + 1rem, 1.5rem); }
+    .fluid-text-2xl { font-size: clamp(1.5rem, 2vw + 1rem, 1.875rem); }
+    .fluid-text-3xl { font-size: clamp(1.875rem, 3vw + 1.2rem, 2.25rem); }
+    .fluid-heading-mobile { font-size: clamp(2rem, 4vw + 1rem, 3rem); }
+    .fluid-heading-desktop { font-size: clamp(3rem, 6vw + 1rem, 4.5rem); }
+
+    .editorial-grid > .full-bleed {
+        grid-column: 1 / -1; /* Break out to full width */
+        width: 100%;
+    }
+    .editorial-grid > .wide-bleed {
+        /* A slightly wider breakpoint than text, perfect for code blocks or moderate images */
+        grid-column: 1 / -1;
+        max-width: 64rem; /* max-w-5xl */
+        width: 100%;
+        margin-inline: auto;
+    }
+
+    /* Wrap helpers for CDN image floating */
+    @media (min-width: 740px) {
+        .wrap-left {
+            float: left;
+            margin-right: 2rem;
+            margin-bottom: 1rem;
+            max-width: 50%;
+        }
+        .wrap-right {
+            float: right;
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+            max-width: 50%;
+        }
+    }
+    
+    @media (max-width: 739px) {
+        /* On mobile, disable floats to prevent text squishing and clipping */
+        .wrap-left, .wrap-right {
+            display: block;
+            float: none;
+            margin-inline: auto;
+            margin-bottom: 2rem;
+            max-width: 100%;
+        }
+    }
+    /* Note: Add specific shape-outside via inline style where the image shape is known */
+}

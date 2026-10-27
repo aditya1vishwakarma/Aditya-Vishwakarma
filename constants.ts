@@ -1,5 +1,5 @@
 
-import { Project, BlogPost, MoodBoardItem, RestPlate } from './types';
+import { Project, BlogPost, MoodBoardItem } from './types';
 
 /**
  * Single source of truth for the mobile/desktop split. Mirrors the `md`
@@ -13,6 +13,18 @@ import { Project, BlogPost, MoodBoardItem, RestPlate } from './types';
  */
 export const MOBILE_MAX = 740;
 
+/**
+ * The one page's own split goes by height as well: a screen less than this
+ * tall is a phone held sideways, whatever its width, and gets the phone's
+ * layout — the pane filling the screen, the nav behind a button — as there's
+ * no room for the nav, the margins and a pane beneath them. No iPad is this
+ * short. Mirrored in components/Home/home.css.
+ */
+export const SHORT_MAX = 500;
+
+/** The one page's phone layout: a screen that's narrow, or short. */
+export const isCompact = (width: number, height: number) => width < MOBILE_MAX || height < SHORT_MAX;
+
 export const isMobileViewport = () =>
   typeof window !== 'undefined' && window.innerWidth < MOBILE_MAX;
 
@@ -24,7 +36,7 @@ export const PROJECTS: Project[] = [
     description: 'An iOS app that photographs, classifies, and curates architecture using native platform frameworks.',
     fullDescription: 'Placemarks is my in-development iOS app that allows you to curate the architecture you see around you. Just take a photo of a building you like and the app will suggest tags related to the photo. The result is an extremely personal mood board that stays on your phone. It uses Apple\'s native Vision, SwiftData, AVFoundation, and MapKit frameworks.',
     imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/placemarksbanner.jpg',
-    date: 'June 2026',
+    date: 'Summer 2026',
     role: 'PM/ Developer',
     path: '/works/placemarks',
     isSelected: true
@@ -101,9 +113,6 @@ export const PROJECTS: Project[] = [
   }
 ];
 
-// Redirect cards (e.g. Un-Selected Works) are navigation, not projects.
-export const PROJECT_COUNT = PROJECTS.filter((p) => !p.isRedirect).length;
-
 export const BLOG_POSTS: BlogPost[] = [
   {
     id: '4',
@@ -111,7 +120,7 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'October 2026',
     readTime: '3 min read',
     category: 'Design',
-    excerpt: 'How I designed my first app icon for Placemarks, from a hill and a library to a single brutalist shape.',
+    excerpt: 'How I designed my first app icon for Placemarks, from concept to interation to final design.',
     path: '/blog/app-icon-design',
     content: `I've never created a logo before. Let alone an app icon.`
   },
@@ -178,55 +187,40 @@ export const MOOD_BOARD: MoodBoardItem[] = [
   { id: '30', title: 'Osaka World Expo - Joinery', imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/mood%20board/worldexpo.avif', tags: ['Architecture', 'Design'], description: 'The Osaka World Exo ring was one of the things I really wanted to see when I went. It uses a concept called Nuki which is a joinery style that tries to do everything without glue or nails. Sashimoni is also another joinery style I love.', orientation: 'portrait', link: 'https://www.dezeen.com/2025/04/24/the-grand-ring-expo-2025-osaka/' }
 ];
 
-// ─────────────────────────────────────────────────────────────
-// (REST) — the mood board's quiet room. Desktop only.
-//
-// A full-bleed background, a drifting WebGL cloud layer over it, and
-// photographs that breathe in and out at random spots on the screen.
-// Everything you'd want to tune lives in this block.
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Master switch for the (Rest) tab.
- *
- * Off: the toggle never renders, so the view is unreachable and none of its
- * work ever starts — no backdrop fetch, no WebGL context, no plate scheduler.
- * Everything below stays wired up; flip this to `true` to bring it back.
- */
-export const REST_TAB_ENABLED = false;
-
-/** Full-screen backdrop for the (Rest) tab. Rendered `object-cover`. */
-export const REST_BACKGROUND_URL =
-  'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/%E3%81%86.avif';
-
-/**
- * Cloud-layer settings, passed straight through to <Clouds>. These are the
- * values from the canvasui.dev playground; see components/UI/Clouds.tsx for
- * the full option list (density, shading, opacity, wind, refraction…).
- */
-export const REST_CLOUD_OPTIONS = {
-  scale: 1.05,
-  speed: 1.2,
-  cover: 0.18,
-  shadowOffsetY: 200,
-};
-
-/**
- * The photographs. Clouds, mountains — whatever you want to sit with.
- *
- * Order doesn't matter: the section shuffles them into a deck and deals the
- * whole deck before reshuffling, so nothing repeats until everything has been
- * shown. Size and placement are computed from each image's real aspect ratio,
- * so portrait and landscape both work — no `orientation` field needed.
- *
- * Four or more entries gives the rotation enough room to feel unrepetitive.
- * With zero entries the tab still renders: background and clouds, nothing else.
- */
-export const REST_PLATES: RestPlate[] = [
-  // Paste your CDN links here. Example:
-  //
-  // { id: 'r1', imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/rest/sky-01.avif' },
-  // { id: 'r2', imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/rest/ridge-02.avif', caption: 'Mt Madonna, June' },
+/** Photographs: a ~400px preview for grids, and the full-quality file for viewing one on its own. */
+export const PHOTOS: { preview: string; full: string }[] = [
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/cupertinoleaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/cupertinoleaves.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/lovespring.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/lovespring.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/appleparkvisitor.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/appleparkvisitor.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/chicagowaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/chicagowaves.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/vancouverleaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/vancouverleaves.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/hakonejapanesemaple.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/hakonejapanesemaple.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/porscheracing.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/porscheracing.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/atlasbar.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/atlasbar.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/daisies.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/daisies.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/alaskabus.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/alaskabus.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/mttam.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/mttam.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/self4.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/self4.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/pfp.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/pfp.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/maxverstappen.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/maxverstappen.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/hakone.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/hakone.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/beautiful.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/beautiful.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/futuresamurai.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/futuresamurai.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/birdvsworld.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/birdvsworld.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/halfdome.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/halfdome.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/shibuyaskyview.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/shibuyaskyview.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/steph.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/steph.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/mbs.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/mbs.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/selffav.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/selffav.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/sfhenge.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/sfhenge.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/thebay.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/thebay.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/whistler.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/whistler.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/water.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/water.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/ucschills.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/ucschills.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/glassrain.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/glassrain.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/arashiyama.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/arashiyama.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/giantsgame.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/giantsgame.avif" },
+  { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/20kgtoyota.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/20kgtoyota.avif" }
 ];
 
 export const SOCIAL_LINKS = {

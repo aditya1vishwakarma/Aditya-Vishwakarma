@@ -1,11 +1,5 @@
-import React, { useRef } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
-import { motion as motionComponent } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import CircularScrollIndicator from './CircularScrollIndicator';
-
-const { Link } = ReactRouterDOM as any;
-const motion = motionComponent as any;
+import React from 'react';
+import { usePaneTitle } from '../Home/SectionPane';
 
 interface WritingLayoutProps {
   children: React.ReactNode;
@@ -13,70 +7,50 @@ interface WritingLayoutProps {
   date?: string;
   readTime?: string;
   category?: string;
-  backLink?: {
-    path: string;
-    label: string;
-  };
 }
 
-const WritingLayout: React.FC<WritingLayoutProps> = ({ 
-  children, 
-  title, 
-  date, 
-  readTime, 
-  category, 
-  backLink = { path: '/', label: 'Back' }
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+// Strong enough to read on the glass, as small text needs: 4.5:1 and up.
+const DETAIL = 'font-sans text-[11.5px] uppercase tracking-[0.16em]';
+const META = `${DETAIL} text-charcoal/75`;
+const CATEGORY = `${DETAIL} text-moss`;
+
+/**
+ * A project or a post, as it's read in the pane: its details and title over
+ * an editorial grid. Paragraphs and lists fall into the middle column, the
+ * width for reading; pictures and embeds can bleed out wide, or across all
+ * of it (see Prose). Getting back to the list and the reading progress are
+ * the pane's.
+ */
+const WritingLayout: React.FC<WritingLayoutProps> = ({ children, title, date, readTime, category }) => {
+  const named = usePaneTitle();
+  const details = [date, readTime].filter(Boolean);
 
   return (
-    <div className="bg-background min-h-screen relative selection:bg-moss/20 selection:text-moss-light">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="pt-24 pb-32 px-6 md:px-8 max-w-none relative"
-      >
-        <CircularScrollIndicator />
+    <div className="pb-24 pt-2 selection:bg-moss/20 selection:text-moss-light md:pt-4">
+      <div className="editorial-grid">
+        <header className="mb-6">
+          {(details.length > 0 || category) && (
+            <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-charcoal/10 pb-6">
+              {details.map((d, i) => (
+                <React.Fragment key={d}>
+                  {i > 0 && <span aria-hidden="true" className="h-1 w-1 rounded-full bg-charcoal/25" />}
+                  <span className={META}>{d}</span>
+                </React.Fragment>
+              ))}
+              {details.length > 0 && category && <span aria-hidden="true" className="h-1 w-1 rounded-full bg-charcoal/25" />}
+              {category && <span className={CATEGORY}>{category}</span>}
+            </div>
+          )}
 
-        <div className="editorial-grid relative">
-          {/* Header Section (falls into the reading column text block) */}
-          <div className="mb-6">
-            <Link to={backLink.path} className="inline-flex items-center gap-2 text-charcoal/40 hover:text-moss mb-12 transition-colors group">
-              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              <span className="uppercase tracking-widest text-[10px] font-bold">{backLink.label}</span>
-            </Link>
+          {title && (
+            <h1 {...named} className="mb-8 font-serif text-[clamp(2.25rem,4vw+1.25rem,4.5rem)] leading-[1.1] tracking-tight text-charcoal outline-none">
+              {title}
+            </h1>
+          )}
+        </header>
 
-            {/* Optional Metadata */}
-            {(date || readTime || category) && (
-              <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest text-charcoal/40 mb-6 font-bold pb-6 border-b border-charcoal/10">
-                {date && <span>{date}</span>}
-                {date && (readTime || category) && <span className="w-1 h-1 bg-charcoal/20 rounded-full" />}
-                {readTime && <span>{readTime}</span>}
-                {readTime && category && <span className="w-1 h-1 bg-charcoal/20 rounded-full" />}
-                {category && <span className="text-moss">{category}</span>}
-              </div>
-            )}
-
-            {/* Title */}
-            {title && (
-              <h1 className="font-serif fluid-heading-desktop text-charcoal leading-[1.1] tracking-tight mb-8">
-                {title}
-              </h1>
-            )}
-          </div>
-
-          {/* 
-            Content Block: The editorial grid handles sizing. 
-            Standard elements like <p>, <ul> fall into the central grid column.
-            Images and embeds can break out with "full-bleed" or "wide-bleed".
-          */}
-          <article ref={containerRef} className="col-span-full grid grid-cols-subgrid text-charcoal/80 fluid-text-lg font-serif">
-            {children}
-          </article>
-        </div>
-      </motion.div>
+        <article className="col-span-full grid grid-cols-subgrid font-serif fluid-text-lg text-charcoal/80">{children}</article>
+      </div>
     </div>
   );
 };

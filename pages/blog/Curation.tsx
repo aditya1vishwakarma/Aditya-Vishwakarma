@@ -9,7 +9,6 @@ const Curation = () => {
       date="Random Note, 2025"
       readTime="1 min read"
       category="Random Thoughts"
-      backLink={{ path: '/blog', label: 'Back to Journal' }}
     >
       <Section>
         <Quote>"Good artists copy, great artists steal" by Piccaso.</Quote>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion as motionComponent, AnimatePresence, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { isMobileViewport } from '../../constants';
+import { PHOTOS, isMobileViewport } from '../../constants';
 
 // Fix: Cast motion to any to resolve property existence type errors for SVG and HTML motion elements
 const motion = motionComponent as any;
@@ -37,7 +37,8 @@ const DESKTOP_REVEAL_DIST = 1600;
 // count is computed from these rather than fixed, so the viewport decides how many photos
 // fit — a short phone drops a row instead of squashing cells, a tall one gains one — and
 // neither the grid nor the hero ever needs scrolling.
-const GRID_COLS = 4;         // grid-cols-4
+const GRID_COLS = 4;         // mobile columns
+const DESKTOP_COLS = 8;
 const GRID_GAP = 2;          // gap-0.5
 const GRID_PAD = 8;          // p-2 on the wrapper
 const GRID_BOTTOM_PAD = 24;  // guaranteed breathing room under the last row
@@ -357,43 +358,8 @@ const Hero: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  // Images with preview and full-quality URLs
-  // Preview: ~400x400 thumbnails for grid (fast loading)
-  // Full: High-resolution for lightbox
-  const images = [
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/cupertinoleaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/cupertinoleaves.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/lovespring.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/lovespring.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/appleparkvisitor.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/appleparkvisitor.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/chicagowaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/chicagowaves.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/vancouverleaves.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/vancouverleaves.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/hakonejapanesemaple.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/hakonejapanesemaple.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/porscheracing.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/porscheracing.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/atlasbar.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/atlasbar.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/daisies.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/daisies.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/alaskabus.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/alaskabus.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/mttam.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/mttam.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/self4.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/self4.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/pfp.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/pfp.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/maxverstappen.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/maxverstappen.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/hakone.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/hakone.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/beautiful.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/beautiful.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/futuresamurai.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/futuresamurai.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/birdvsworld.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/birdvsworld.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/halfdome.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/halfdome.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/shibuyaskyview.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/shibuyaskyview.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/steph.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/steph.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/mbs.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/mbs.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/selffav.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/selffav.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/sfhenge.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/sfhenge.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/thebay.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/thebay.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/whistler.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/whistler.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/water.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/water.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/ucschills.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/ucschills.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/glassrain.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/glassrain.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/arashiyama.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/arashiyama.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/giantsgame.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/giantsgame.avif" },
-    { preview: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/previewimges/20kgtoyota.avif", full: "https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/fullimages/20kgtoyota.avif" }
-  ];
+  // Previews (~400px) for the grid, full quality for the lightbox.
+  const images = PHOTOS;
 
   // Where the blob sits before anyone has touched it. On mobile that's the empty upper
   // area, clear of the name block at ~75%, lifted 20px to open up the gap below it.
@@ -589,7 +555,7 @@ const Hero: React.FC = () => {
                 <span className="block text-moss">Vishwakarma</span>
               </h1>
 
-              {/* Role kicker - Nimbus Sans, matches desktop family.
+              {/* Role kicker - Helvetica Neue, matches desktop family.
                   Left-aligned, sharing the name's left edge. Tracking only adds space to the
                   right of each glyph, so no margin correction is needed on this side. */}
               <div className="mt-7 text-left font-sans uppercase text-charcoal/50 tracking-[0.18em] text-[13px] leading-[1.9]">
@@ -663,16 +629,28 @@ const Hero: React.FC = () => {
               </motion.button>
         </motion.div>
 
-        {/* PHOTO GRID - 4x8 on desktop; on mobile the viewport picks the row count.
-             The aspect ratio has to track that count for the cells to stay square, and
-             Tailwind can't emit a class for a runtime value, so mobile sets it inline and
-             the classes cover the widths where the count is static. max-h-full stays as a
-             backstop: if a viewport is too short even for GRID_MIN_ROWS, the grid gives up
-             square cells rather than pushing the hero into a scroll. */}
-        <div className={`w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isMobile ? '' : 'flex-1'} ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
+        {/* PHOTO GRID - 8x4 on desktop; on mobile the viewport picks the row count.
+             Rows are explicit equal tracks: left to auto-size, each row grew to fit its
+             photos, so rows of portraits came out tall and rows of landscapes short.
+             The aspect ratio tracks cols/rows so equal tracks are also square ones.
+             Desktop sizes the grid like object-contain against its wrapper (a size
+             container): full width, unless that would be too tall, then full height and
+             narrower. Otherwise a short window clamps the height but not the width and
+             squashes every cell. Mobile already picks a row count that fits; max-h-full
+             stays there as a backstop for viewports too short even for GRID_MIN_ROWS. */}
+        <div className={`w-full min-h-0 flex items-center justify-center p-2 md:p-6 transition-all duration-1000 ${isMobile ? '' : 'flex-1 [container-type:size]'} ${isFullyRevealed ? "opacity-100" : "opacity-40"}`}>
           <div
-            className="grid grid-cols-4 md:grid-cols-8 gap-0.5 w-full max-h-full aspect-[4/6] md:aspect-[2/1]"
-            style={isMobile ? { aspectRatio: `${GRID_COLS} / ${gridRows}` } : undefined}
+            className={`grid gap-0.5 max-h-full ${isMobile ? 'w-full' : ''}`}
+            style={(() => {
+              const cols = isMobile ? GRID_COLS : DESKTOP_COLS;
+              const rows = isMobile ? gridRows : Math.ceil(images.length / DESKTOP_COLS);
+              return {
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+                aspectRatio: `${cols} / ${rows}`,
+                ...(isMobile ? {} : { width: `min(100cqw, ${cols / rows} * 100cqh)` }),
+              };
+            })()}
           >
             {(isMobile ? images.slice(0, gridRows * GRID_COLS) : images).map((img, i) => (
               <motion.div

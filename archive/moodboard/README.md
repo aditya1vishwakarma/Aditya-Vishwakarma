@@ -20,7 +20,9 @@ relative imports read as they did when it was live.
 | `components/UI/CloudControls.tsx` | The (Rest) tab's cloud tuning panel. |
 
 Still in the live code and still used: `MOOD_BOARD` in `constants.ts` (the board's
-items) and `components/UI/Squircle.tsx`. The `REST_*` settings in `constants.ts`
-and the `RestPlate` type in `types.ts` only fed the (Rest) tab and are now unused.
+items) and `components/UI/Squircle.tsx`. The `REST_*` settings and the `RestPlate`
+type only fed the (Rest) tab, so they've moved out of the live code into this
+folder's `constants.ts` and `types.ts`. Those re-export the live files too, so
+every import here still finds what it names.
 
 To bring a file back, move it to its original path.

@@ -124,6 +124,7 @@ export const Img: React.FC<ImgProps> = ({
           alt={alt}
           className="max-h-full max-w-full object-contain"
           loading={priority ? "eager" : "lazy"}
+          decoding="async"
         />
       </div>
     ) : (
@@ -312,15 +313,19 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   }, [imageIndices]);
 
   // ── Keyboard nav ───────────────────────────────────────────────
+  // Its keys come first, so Escape puts the picture away before it would take the pane back to its list.
   useEffect(() => {
     if (lightboxIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeLightbox();
       else if (e.key === 'ArrowLeft') navigateLightbox(-1);
       else if (e.key === 'ArrowRight') navigateLightbox(1);
+      else return;
+      e.stopPropagation();
+      e.preventDefault();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [lightboxIndex, navigateLightbox]);
 
   // ── Lock body scroll when lightbox is open ─────────────────────
@@ -397,6 +402,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                         alt={item.alt || ''}
                         className="max-h-full max-w-full object-contain"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </button>
@@ -457,7 +463,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
         )}
       </figure>
 
-      {/* ── Lightbox overlay (portalled to body via React) ──── */}
+      {/* ── Lightbox overlay, over the whole of the pane it's in ── */}
       <AnimatePresence>
         {lightboxIndex !== null && (
           <motion.div
@@ -514,6 +520,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
               key={lightboxIndex}
               src={items[lightboxIndex].src}
               alt={items[lightboxIndex].alt || 'Enlarged image'}
+              decoding="async"
               initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.92, opacity: 0 }}

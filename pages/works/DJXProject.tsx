@@ -12,7 +12,6 @@ const DJXProject = () => {
       category="Product Manager"
       date="March 2026"
       readTime="10 min read"
-      backLink={{ path: '/works', label: 'Back to Works' }}
     >
       <Section className="mb-4">
         <Lead>

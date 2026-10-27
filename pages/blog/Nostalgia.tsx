@@ -9,7 +9,6 @@ const Nostalgia = () => {
             date="Random Note, 2025"
             readTime="1 min read"
             category="Random Thoughts"
-            backLink={{ path: '/blog', label: 'Back to Journal' }}
         >
             <Section>
                 <Quote>Nostalgia is probably the most potent and dangerous feeling we have.</Quote>

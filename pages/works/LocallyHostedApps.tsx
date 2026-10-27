@@ -10,7 +10,6 @@ const LocallyHostedApps = () => {
       category="Self-Hosting"
       date="October 2026"
       readTime="2 min read"
-      backLink={{ path: '/works', label: 'Back to Works' }}
     >
       <Section>
         <Lead>

@@ -10,7 +10,6 @@ const Placemarks = () => {
       category="iOS Development"
       date="June 2026"
       readTime="5 min read"
-      backLink={{ path: '/works', label: 'Back to Works' }}
     >
       <Section>
         <Lead>
@@ -43,7 +42,7 @@ const Placemarks = () => {
             },
             {
               type: 'video',
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Info%20View.mov',
+              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/detaildemo.mp4',
               alt: 'Detail view of a saved building entry',
               caption: 'Detail View Page... polish still needed!',
             },

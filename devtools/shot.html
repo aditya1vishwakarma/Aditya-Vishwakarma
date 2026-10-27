@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maple · shot</title>
+<!--
+  One fixed frame of the maple, with no controls, for stills and posters.
+  Dev server only (npm run dev → /devtools/shot.html).
+
+  ?eye=x,y,z&target=x,y,z&fov=34&season=summer|autumn
+-->
+<style>
+  html, body, #root { margin: 0; height: 100%; }
+  body { background: #D7EBF2; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./shot.tsx"></script>
+</body>
+</html>

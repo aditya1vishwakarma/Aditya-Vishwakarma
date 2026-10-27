@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maple · dev</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap">
+<!--
+  The site's one page — the maple scene, with the name, title, nav and pane
+  over it — for working on away from the site. Served by the dev server only
+  (npm run dev → /devtools/maple.html); the production build never sees it.
+  The pane's addresses work here too, on the hash: maple.html#/works.
+
+  G   a gust now           S   turn the season
+  ?season=autumn   start in autumn        ?gust=2   a gust 2 s after load
+  ?hud=0           hide the keys          ?hero=0   the scene alone, no type or nav
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body, #root { margin: 0; height: 100%; }
+  body { background: #A6D4EE; overflow: hidden; font: 13px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif; color: #333333; }
+  canvas { display: block; touch-action: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./maple.tsx"></script>
+</body>
+</html>

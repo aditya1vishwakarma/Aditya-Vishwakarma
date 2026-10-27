@@ -7,7 +7,6 @@ const PhotoCaptions = () => {
     <WritingLayout
       title="Shared Memories &amp; Captions"
       category="Un-Selected Works"
-      backLink={{ path: '/works', label: 'Back to Works' }}
     >
       <Section>
         <Quote className="mt-12">

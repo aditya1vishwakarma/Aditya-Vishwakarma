@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated gallery thumbnails (devtools/make-previews.mjs), uploaded to R2 by hand
+devtools/previews-out
