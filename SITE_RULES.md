@@ -23,6 +23,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
    - **Head:** the section's name, open out (Work and Photos), and close. A section's line about itself (Photos, Writing) sits directly under its name, as the first thing on the glass, and scrolls away under the head.
    - **Work's name** scrolls away with its list rather than staying in the head, so it never stacks over Un-Selected Works. Only the buttons stay, and only the glass's top edge blurs.
    - **Scene:** it keeps drawing, the camera slides so the tree stays in view beside the pane, and the wind settles.
+   - **The field calms:** of the daisies that sway, only 5% go on swaying, while the tree sways on. They settle one at a time over about 2.4s, and take it up again at home (`FLOWERS_BESIDE` in `components/Maple/MapleScene.tsx`).
 3. **contentView (a piece open to read).** Chosen from a list: a project, a post, or a photo from the expanded view.
    - **Look:** the glass fills the screen inside the reading margin and thickens to 90% solid over about 0.9s.
    - **Head:** the same for everything, Back (to the list) and close.
@@ -53,6 +54,9 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - The type sits on a 24px margin.
   - The nav and the pane sit 14px from the edges (`navPlace` in `components/Layout/Navbar.tsx`).
   - In contentView the pane takes the top as well, still 14px in.
+- **Edge to edge:** the page is drawn under a phone's status bar, notch and home bar (`viewport-fit=cover` in `index.html`), so the scene fills the whole screen.
+  - Everything placed on the margins is placed inside the safe area: the nav, the controls, the pane and the type, each on its margin plus the inset on that side.
+  - Script reads the insets with `useSafeArea` (`components/Home/safeArea.ts`); CSS uses `env(safe-area-inset-*)`. Both are zero on a screen without them.
 
 ## Breakpoints
 
@@ -75,9 +79,10 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 ## Motion
 
-- **Nothing on the glass is laid out again while the glass changes size.** Content reflowing during a resize is what made Photos lag: 1–2s main-thread stalls in Firefox.
+- **Nothing on the glass is laid out again while the glass changes size.** Content reflowing during a resize stalls the main thread, badly in Firefox.
   - The glass sets off at once (0.44s). Meanwhile what was on it fades out (0.16s), held at the width it had.
-  - The next card is built during the move, at the width and height it will have (`usePaneHeld` gives the height), and fades in as the glass lands. It's laid out once, never again frame by frame, so opening Photos out to expandedView doesn't stall on its grid.
+  - The next card is built during the move, at the width and height it will have (`usePaneHeld` gives the height), and fades in as the glass lands. It's laid out once, never again frame by frame. It's built unseen during the move rather than after, because building it after the glass lands puts its cost in the very frame where it starts to fade in.
+- **The order, every time:** the glass moves, then the card comes in, then its pictures. Opening Photos out takes about 0.8s: the glass in 0.44s, the grid in by about 0.6s, and the 32 photos in by about 0.8s.
 - **New content at the same size:** the next card is built beneath the old one as soon as the old one starts to leave, and comes in once it has gone (the notecard turn). Building it can't hold the turn up.
 - **Frosted glass is moved or tinted, never faded.** Safari paints faded frosted glass white.
   - To thicken it, animate the opacity of an overlay inside the glass.
@@ -87,13 +92,16 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 ## Performance
 
-- A pane's pictures wait until the pane has come to rest. A section's pictures start loading when its nav item is pointed at or focused (Work, Photos).
+- **A pane's pictures wait for the glass to land and the card to come in** (`usePaneSettled`, per card). A photo after a photo doesn't wait, so stepping through them stays quick.
+- **They come in four a frame**, in the order they're laid out, so the browser never decodes and draws a whole grid in one frame. Each fades up only once it's decoded.
+- A section's pictures start loading when its nav item is pointed at or focused (Work, Photos).
 - Content images use `decoding="async"`, so a large picture never holds up a frame.
 - A pane's pictures are never `loading="lazy"`: they're all in view once the pane rests, and Safari can leave a lazy picture in a clipped frame unloaded. Prefetched pictures are decoded ahead too.
 - The scene draws 30fps in calm air and 60fps during a gust or a camera move. It draws nothing while contentView covers it.
 
 ## Pointing at things
 
+- **The home screen isn't selectable:** a stray tap, a double tap or a long press on a phone highlights nothing, and there's no grey tap flash. What's on the pane can still be selected and copied (`.hero` in `home.css`).
 - **Lifting:** a row or tile pointed at is lifted onto the site's off-white, `--color-background` (#FBFAF8) at 80%. It's not a green tint, and titles don't turn green.
 - **In expandedView** the glass is nearly that colour already, so a faint grey edge and a soft shadow show the lift as well.
 - **Arrows:** a card's arrow slides in on hover. On a selected work's tile it sits in the bottom-right corner.
@@ -141,12 +149,13 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - The grid fills the pane exactly, under its line about itself.
 - **Wait before the photos appear:** switching to Photos waits for the last list to leave. From a narrower section, the glass also resizes first.
 - **The pictures themselves** are already loaded by then: the previews are fetched at idle on desktop, and on pointing at Photos elsewhere.
+- **The previews must be plain AVIFs**, about 800px on the short side, as `devtools/make-previews.mjs` makes them. Firefox can't decode tiled AVIFs, or ones with a crop box. It then falls back to the full-size photo, and decoding 32 of those at once froze opening Photos out for about 2s.
 - **Pointing at a photo** lifts it out of its cell: it grows 8% over its neighbours, with a shadow, from the corner that keeps it inside the grid (a photo on the right edge grows leftwards, and so on).
 
 ## Season
 
 - The scene opens in autumn from October through February, and in summer from March through September (`seasonOf` in `components/Maple/mapleConfig.ts`).
-- S swaps it (or *Swap seasons* in the controls). On the dev page, `?season=` sets it.
+- S swaps it, or *Change Seasons* in the controls (*Swap Seasons* on a touch screen). On the dev page, `?season=` sets it.
 
 ## Type
 
@@ -161,9 +170,21 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 ## Controls
 
-- **A pill on the nav's glass** in the top left, level with the nav and as tall, reading *controls* in italic Helvetica Neue. Closed, it's only as wide as the word. Pointed at or focused, it widens to 208px and opens down to the controls, one under another (`components/Home/Controls.tsx`).
-- It's only there at home, with no pane open, and never on a phone.
-- **The keys:** G brings on a gust, and S swaps the season.
+- **A pill on the nav's glass** in the top left, level with the nav and as tall, reading *controls* in italic Helvetica Neue. Closed, it's only as wide as the word (`components/Home/Controls.tsx`).
+- It's there at home, with no pane open, on every screen.
+- **With a pointer that hovers** (a computer), pointing at it or tabbing to it opens it, 208px wide, down to:
+  - *G* Gust of Wind
+  - *S* Change Seasons
+  - Music muted / on
+- **On a touch screen** (`(hover: none)`: a phone or a tablet), a tap opens it, up to 272px wide and short of the nav's menu button. A tap anywhere else closes it. It shows:
+  - Tap on the Tree to Send a Gust! (a line to read, not a button)
+  - Swap Seasons
+  - Music muted / on
+- **The tree:** on a touch screen, a tap on the tree at home sends a gust through it. A tap is lifted within 0.5s and moved less than 12px. The tree counts wherever it's drawn this frame: each leaf mass, 10% bigger than drawn, and the trunk, at least 18px wide (`treeAt` on the scene's handle).
+- **The keys:**
+  - G brings on a gust, and S swaps the season.
+  - W, P and B open Work, Photos and the blog from anywhere, as the nav does: pressed again on that list, they close it. About and Contact have no key.
+  - Keys do nothing with Cmd, Ctrl or Alt held, or while typing.
 - **Music** is muted on every visit. It has no key, so a stray press can't start it: it only plays when it's turned on in the controls. That press is also what lets the browser play sound.
   - The song streams from R2 and loops. Set its address in `MUSIC_SRC` in `components/Home/music.ts`. Until then the switch works and nothing plays.
   - Nothing is fetched until it's first turned on.
@@ -172,6 +193,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 - `devtools/maple.html`, served by the dev server only, is the one page for working on the scene.
 - URL options: `?season=autumn`, `?gust=2`, `?hud=0` (no controls) and `?hero=0` (the scene alone).
+- The scene's handle is on the console as `maple`: `maple.current.gust()`, `maple.current.treeAt(x, y)`.
 
 ## Retired
 

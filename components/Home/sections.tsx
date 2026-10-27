@@ -48,28 +48,64 @@ const CardArrow: React.FC<{ size?: number; className?: string }> = ({ size = 22,
 );
 
 /**
- * A picture in a pane, filling its frame. It's drawn once the pane has come to
- * rest — so fetching and decoding it never holds up the slide — and fades up
- * as it arrives; it grows a touch while its card is pointed at.
+ * Pictures come on a few at a time, a frame apart, in the order they're laid
+ * out: a grid of them never asks the browser to fetch, decode and draw them
+ * all in one frame, and they sweep in across it.
+ */
+const PER_FRAME = 4;
+const waiting: (() => void)[] = [];
+let ticking = 0;
+const tick = () => {
+  waiting.splice(0, PER_FRAME).forEach((go) => go());
+  ticking = waiting.length ? requestAnimationFrame(tick) : 0;
+};
+const inTurn = (go: () => void) => {
+  waiting.push(go);
+  ticking ||= requestAnimationFrame(tick);
+  return () => {
+    const at = waiting.indexOf(go);
+    if (at >= 0) waiting.splice(at, 1);
+  };
+};
+
+/**
+ * A picture in a pane, filling its frame. It's drawn once the pane and its
+ * card have come to rest — so fetching and decoding it never holds up the
+ * glass, or the card coming in — in its turn among the others, and fades up
+ * once it's decoded, so drawing it never waits on that either. It grows a
+ * touch while its card is pointed at.
  *
  * Never lazy: a pane's pictures are all in view as it rests, and Safari can
  * leave a lazy one in a clipped frame unloaded — so it never fades up. One
- * already in hand when it's drawn is shown at once, load event or no.
+ * already in hand when it's drawn is shown as soon as it's decoded, load
+ * event or no.
  */
 const PaneImage: React.FC<{ src: string; grow: string; alt?: string; onError?: React.ReactEventHandler<HTMLImageElement> }> = ({ src, grow, alt = '', onError }) => {
   const settled = usePaneSettled();
+  const [turn, setTurn] = useState(false);
   const [shown, setShown] = useState(false);
-  const inHand = useCallback((img: HTMLImageElement | null) => {
-    if (img?.complete && img.naturalWidth) setShown(true);
+  useEffect(() => (settled ? inTurn(() => setTurn(true)) : undefined), [settled]);
+  const ready = useCallback((img: HTMLImageElement) => {
+    // Not decoded after all (it's been given another picture to fall back on, say): shown if it's there to show.
+    img.decode().then(
+      () => setShown(true),
+      () => img.complete && img.naturalWidth > 0 && setShown(true),
+    );
   }, []);
-  if (!settled) return null;
+  const inHand = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img?.complete && img.naturalWidth) ready(img);
+    },
+    [ready],
+  );
+  if (!settled || !turn) return null;
   return (
     <img
       ref={inHand}
       src={src}
       alt={alt}
       decoding="async"
-      onLoad={() => setShown(true)}
+      onLoad={(e) => ready(e.currentTarget)}
       onError={onError}
       className={`h-full w-full object-cover ${grow} ${shown ? 'opacity-100' : 'opacity-0'}`}
       style={{ transition: 'opacity 0.45s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -243,7 +279,7 @@ export const WorkSection: React.FC = () => {
           <h2 id="unselected-works" className={PANE_TITLE}>
             {archive?.title ?? 'Un-Selected Works'}
           </h2>
-          {archive && <p className={`mt-4 max-w-[62ch] ${BODY}`}>{archive.description}</p>}
+          {archive && <p className={`mt-4 ${BODY}`}>{archive.description}</p>}
           <ul className="mt-4 roomy:mt-6">
             {more.map((p) => (
               <li key={p.path} className="border-b border-charcoal/10 last:border-b-0">
@@ -275,15 +311,7 @@ export const WorkSection: React.FC = () => {
 /** Where else there's writing of mine, at the head of the list. */
 export const WRITING_CAPTION = (
   <>
-    You can also find more of my writings at{' '}
-    <a
-      href="https://substack.com/@adityavishwakarma1"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-moss underline decoration-moss/30 underline-offset-2 transition-colors hover:decoration-moss"
-    >
-      my substack.
-    </a>
+    Some of my thoughts and ramblings.
   </>
 );
 
@@ -359,7 +387,7 @@ const fallBackToFull = (full: string) => (e: React.SyntheticEvent<HTMLImageEleme
 };
 
 /** What the photos are, at the head of the grid. */
-export const PHOTOS_CAPTION = "I'm also a hobbyist photographer. Here are some of my favourites.";
+export const PHOTOS_CAPTION = "I'm also a hobbyist photographer. Here are some of my favourites! I shoot on a Fujifilm XT-4";
 
 /** Between photos in the grid. */
 const GAP = 8;
@@ -559,8 +587,8 @@ const MuseumCard: React.FC = () => {
         className="flex items-center justify-between gap-6 bg-white/35 px-5 py-3.5 transition-colors duration-300 group-hover:bg-background/80 group-focus-visible:bg-background/80 roomy:px-6 roomy:py-4"
       >
         <span>
-          <span className="block font-serif text-[20px] leading-tight text-moss roomy:text-[22px]">The Museum</span>
-          <span className={`mt-1 block ${ABOUT_BODY}`}>My mood board: the artifacts, interfaces and projects that set my taste and my standards.</span>
+          <span className="block font-serif text-[20px] leading-tight text-moss roomy:text-[22px]">My Mind Museum</span>
+          <span className={`mt-1 block ${ABOUT_BODY}`}>A Mood Board: Some artifacts, interfaces, music, and projects that inspire me.</span>
         </span>
         <CardArrow size={24} />
       </Squircle>
@@ -633,7 +661,7 @@ export const AboutSection: React.FC = () => {
   return (
     <div ref={root} className="flex flex-col" style={room !== null ? { minHeight: room } : undefined}>
       <p className="font-sans text-[15px] leading-[1.6] text-charcoal/85 roomy:text-[clamp(14px,1.9vh,16.5px)] roomy:leading-[1.55]">
-        I'm a Bay Area native who grew up in Cupertino. Currently an APM helping marketing teams scale growth via digital platforms. My goal in life is to
+        I'm a Bay Area native who grew up in Cupertino. Previously, I was helping marketing teams scale growth via GTM internal tools. My goal in life is to
         make products that real people use, and help the world be a more beautiful and intentional place.
       </p>
       <div className={beside ? 'my-[clamp(16px,2.8vh,24px)] flex gap-6' : 'mb-5 mt-5 flex flex-col gap-5'}>

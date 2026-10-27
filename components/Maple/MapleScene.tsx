@@ -48,6 +48,8 @@ export interface MapleHandle {
   view: () => { position: THREE.Vector3; target: THREE.Vector3 | null; fov: number };
   /** Frames drawn so far. */
   frames: () => number;
+  /** Whether a point on the page, in client pixels, falls on the tree as it's drawn just now: its leaf masses, or its trunk. */
+  treeAt: (x: number, y: number) => boolean;
 }
 
 /* ─── Camera ───────────────────────────────────────────────────── */
@@ -112,6 +114,14 @@ const roomBehind = (from: THREE.Vector3, dir: THREE.Vector3) => {
 };
 
 const probe = new THREE.PerspectiveCamera();
+
+/** Where the trunk stands, and how much wider than drawn it counts as, to be easy to tap. */
+const TRUNK_FOOT = new THREE.Vector3(0, groundHeight(0, 0), 0);
+const TRUNK_REACH = 2.5;
+/** How much bigger than drawn a leaf mass counts as: a fingertip is wide. */
+const LOBE_REACH = 1.1;
+/** The least a tap may miss the trunk by and still be on it, in pixels. */
+const TRUNK_LEAST = 18;
 
 /**
  * The shot with a pane open over the right of the screen, leaving the left
@@ -301,6 +311,31 @@ const Pacer: React.FC<{ wind: Gusts; motion: { moving: boolean }; drawn: { frame
 /* ─── Wind and season ──────────────────────────────────────────── */
 
 const tmp = new THREE.Vector3();
+const spot = new THREE.Vector3();
+const middle = new THREE.Vector3();
+const rim = new THREE.Vector3();
+const across = new THREE.Vector3();
+const tap = new THREE.Vector2();
+const onPage = new THREE.Vector2();
+const edge = new THREE.Vector2();
+const along = new THREE.Vector2();
+const tmp2 = new THREE.Vector2();
+
+/** How far `p` is from the line from `a` to `b`, all on the page. */
+const offSegment = (p: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2) => {
+  along.subVectors(b, a);
+  const t = THREE.MathUtils.clamp(along.dot(tmp2.subVectors(p, a)) / Math.max(along.lengthSq(), 1e-6), 0, 1);
+  return tmp2.copy(a).addScaledVector(along, t).distanceTo(p);
+};
+
+/**
+ * Beside a pane, the field calms: of the daisies that sway, only this share
+ * goes on swaying, while the tree sways on. How fast it calms, and how fast
+ * it wakes again at home, in shares a second.
+ */
+const FLOWERS_BESIDE = 0.05;
+const CALMING = 0.4;
+const WAKING = 0.8;
 
 /** Steps the wind and moves the leaf masses' shadows with the crown. Runs before anything else each frame. */
 const useWind = (wind: Gusts, model: MapleModel, uniforms: SceneUniforms) => {
@@ -471,6 +506,33 @@ const MapleScene: React.FC<{
         return { position: eye.position, target, fov: (eye as THREE.PerspectiveCamera).fov };
       },
       frames: () => world.drawn.frames,
+      treeAt: (x, y) => {
+        const { camera: eye, gl: renderer } = get();
+        const box = renderer.domElement.getBoundingClientRect();
+        const toPage = (p: THREE.Vector3, out: THREE.Vector2) => {
+          spot.copy(p).project(eye);
+          out.set(box.left + ((spot.x + 1) / 2) * box.width, box.top + ((1 - spot.y) / 2) * box.height);
+          return spot.z < 1;
+        };
+        tap.set(x, y);
+        across.setFromMatrixColumn(eye.matrixWorld, 0);
+        // A leaf mass where it's swayed to this frame, as far across as it is wide.
+        for (let i = 0; i < world.model.lobes.length; i++) {
+          const lobe = world.uniforms.uLobes.value[i];
+          middle.set(lobe.x, lobe.y, lobe.z);
+          if (!toPage(middle, onPage)) continue;
+          rim.copy(middle).addScaledVector(across, lobe.w * LOBE_REACH);
+          toPage(rim, edge);
+          if (tap.distanceTo(onPage) <= onPage.distanceTo(edge)) return true;
+        }
+        // The trunk, from its foot to the middle of the crown.
+        rim.set(TREE.trunkRadius * TRUNK_REACH, 0, 0).add(TRUNK_FOOT);
+        toPage(TRUNK_FOOT, onPage);
+        toPage(rim, edge);
+        const width = Math.max(TRUNK_LEAST, onPage.distanceTo(edge));
+        toPage(CROWN, edge);
+        return offSegment(tap, onPage, edge) <= width;
+      },
     };
     return () => {
       handle.current = null;
@@ -483,6 +545,16 @@ const MapleScene: React.FC<{
   useEffect(() => {
     world.wind.held = still;
   }, [world, still]);
+
+  const calm = useRef(still);
+  calm.current = still;
+  useFrame((_, dt) => {
+    const share = world.material.daisies.uniforms.uSwayShare;
+    const want = calm.current ? FLOWERS_BESIDE : 1;
+    if (share.value === want) return;
+    const by = Math.min(dt, 1 / 20) * (want < share.value ? CALMING : WAKING);
+    share.value = want < share.value ? Math.max(want, share.value - by) : Math.min(want, share.value + by);
+  });
 
   // Ready once two frames are up: the first can still be compiling its shaders.
   const ready = useRef(onReady);

@@ -57,7 +57,7 @@ export const PROJECTS: Project[] = [
     id: '3',
     title: 'Un-Selected Works',
     category: 'Archive',
-    description: 'A collection of ideas that I couldn\'t vouch for, but are still worth sharing.',
+    description: 'These are ideas that I\'ve had , but upon further exploration, found that I couldn\'t vouch for them for one reason or another.',
     fullDescription: 'These are ideas that I had for a product or feature, but upon further exploration, I found that I couldn\'t vouch for them for one reason or another.',
     imageUrl: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projecthumbnails/unselected.avif',
     date: 'N/a',

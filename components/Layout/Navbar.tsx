@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion as motionComponent, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { glassStyle } from '../UI/glass';
+import { useSafeArea, type Insets } from '../Home/safeArea';
 
 const motion = motionComponent as any;
 
@@ -38,16 +39,20 @@ const LINE = 14 * 1.2;
 
 /**
  * Where the nav's pane sits, from the top and the right of the screen: on the
- * page's margins, as everything else is. A phone's sits a little outside its
- * margins, for the room.
+ * page's margins, as everything else is — inside the safe area, on a phone
+ * with a status bar or a notch. A phone's sits a little outside its margins,
+ * for the room.
  */
-export const navPlace = (margin: number, compact: boolean) => (compact ? { top: margin - 8, right: margin - 10 } : { top: margin, right: margin });
+export const navPlace = (margin: number, compact: boolean, safe?: Insets) => {
+  const place = compact ? { top: margin - 8, right: margin - 10 } : { top: margin, right: margin };
+  return safe ? { top: place.top + safe.top, right: place.right + safe.right } : place;
+};
 
 /** How tall the nav's pane is: the links' pills and the glass round them. A phone's is a 40px button in 3px of pane. */
 export const navHeight = (compact: boolean) => (compact ? 46 : 2 * (INSET + LINK_PAD.y) + LINE);
 
 /** Where the nav's pane ends, going down. */
-export const navBottom = (margin: number, compact: boolean) => navPlace(margin, compact).top + navHeight(compact);
+export const navBottom = (margin: number, compact: boolean, safe?: Insets) => navPlace(margin, compact, safe).top + navHeight(compact);
 
 /** A link's text, and a faint pill under it while it's pointed at. */
 const LINK =
@@ -117,7 +122,7 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
     onSelect(id);
   };
 
-  const place = navPlace(margin, compact);
+  const place = navPlace(margin, compact, useSafeArea());
   // `translate` rather than `transform`, which the nav's arrival holds at the end of its animation.
   const style: React.CSSProperties = {
     ...place,

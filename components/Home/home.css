@@ -15,8 +15,9 @@
   transition: opacity 0.7s ease 0.2s, visibility 0s;
 }
 
+/* On the margin, and clear of a phone's notch when it's turned to that side. */
 .hero-name {
-  left: var(--hero-m);
+  left: calc(var(--hero-m) + env(safe-area-inset-left, 0px));
   font-family: 'Newsreader', serif;
   font-weight: 400;
   /*
@@ -29,7 +30,7 @@
 }
 
 .hero-title {
-  right: var(--hero-m);
+  right: calc(var(--hero-m) + env(safe-area-inset-right, 0px));
   font-family: var(--font-sans);
   font-weight: 500;
   /* By the screen's shorter side, so it keeps its size against the name whichever way the screen is held. */
@@ -70,12 +71,30 @@
   }
 
   .hero-title {
-    left: var(--hero-m);
+    left: calc(var(--hero-m) + env(safe-area-inset-left, 0px));
     right: auto;
     font-size: clamp(13px, 4vmin, 17px);
     letter-spacing: 0.18em;
     text-align: left;
   }
+}
+
+/*
+ * The home screen is for looking at and tapping, not selecting: a stray tap, a
+ * double tap or a press held on a phone highlights nothing, and the tap's own
+ * grey flash is gone too. What's on the pane can still be selected and copied.
+ */
+.hero {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero [role='dialog'] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* While a pane is open the type steps away, and leaves the haze nothing to sit behind. */

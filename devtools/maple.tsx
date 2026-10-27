@@ -19,6 +19,8 @@ const asked = params.get('season');
 
 const MapleDev: React.FC = () => {
   const handle = useRef<MapleHandle | null>(null);
+  // On the console as `maple`, for poking at the scene: `maple.current.gust()`, `maple.current.treeAt(x, y)`.
+  (window as Window & { maple?: typeof handle }).maple = handle;
 
   useEffect(() => {
     const at = Number(params.get('gust'));

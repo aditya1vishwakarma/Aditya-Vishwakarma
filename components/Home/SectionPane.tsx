@@ -59,9 +59,10 @@ export const PANE_PAD = { sides: 'clamp(22px, 2.6vw, 40px)', bottom: 'clamp(24px
 const CAPTION = 'font-sans text-[15.5px] leading-relaxed text-charcoal/80';
 
 /**
- * Whether the pane has come to rest. Until it has, what's heavy to draw — its
- * pictures, to be fetched and decoded — waits, and the slide has the machine
- * to itself.
+ * Whether the pane, and the card on it, have come to rest: the glass slid in
+ * and done changing size, and the card come in on it. Until then, what's
+ * heavy to draw — its pictures, to be fetched and decoded — waits, so the
+ * glass and then the card each have the machine to themselves.
  */
 const Settled = createContext(true);
 export const usePaneSettled = () => useContext(Settled);
@@ -231,13 +232,30 @@ const turned = (tip: number, scale: number) => `perspective(1400px) rotateX(${ti
 const FLAT = turned(0, 1);
 const EXPO_OUT = [0.16, 1, 0.3, 1];
 
-const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; width?: number; children: React.ReactNode }> = ({ delay, turns, fade, width, children }) => {
+const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; width?: number; rest: boolean; children: React.ReactNode }> = ({
+  delay,
+  turns,
+  fade,
+  width,
+  rest,
+  children,
+}) => {
   const current = useIsPresent();
   // A photo for a photo: a quick fade across, overlapping a touch, and no turn.
   const tips = turns && !fade;
   const wait = fade ? Math.min(delay, 0.08) : delay;
   const card = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
+
+  // Its pictures wait for it to have come in: the glass lands, then the card, then what's heavy on it. Not a
+  // photo after a photo, though, which is all picture, and is stepped through quickly.
+  const [landed, setLanded] = useState(!!fade);
+  useEffect(() => {
+    if (landed) return;
+    const done = window.setTimeout(() => setLanded(true), (wait + 0.32) * 1000);
+    return () => window.clearTimeout(done);
+    // Timed from when it's made, with the wait it was made with.
+  }, []);
 
   // Going, it's held where the reader left it — at the width it had, too, so a glass changing size never lays it
   // out again — while the pane goes back to the top for the next, and it has no more say in how far the pane
@@ -282,7 +300,7 @@ const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; width?
       }}
     >
       <div ref={inner} style={width ? { width } : undefined}>
-        {children}
+        <Settled.Provider value={rest && landed}>{children}</Settled.Provider>
       </div>
     </motion.div>
   );
@@ -555,9 +573,8 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
           <div className="grid grid-cols-[minmax(0,1fr)]">
             <AnimatePresence initial={false} onExitComplete={gone}>
               {on && (
-                <Notecard key={on.key} delay={now.delay} turns={turns} fade={on.fade} width={now.width}>
-                  <Settled.Provider value={settled}>
-                    <Held.Provider value={now.width !== undefined ? window.innerHeight - now.box.top - now.box.bottom : null}>
+                <Notecard key={on.key} delay={now.delay} turns={turns} fade={on.fade} width={now.width} rest={settled && !moving.current}>
+                  <Held.Provider value={now.width !== undefined ? window.innerHeight - now.box.top - now.box.bottom : null}>
                     <Look.Provider value={on.look}>
                       <Radius.Provider value={radius}>
                         {on.titleScrolls && !on.back ? (
@@ -567,12 +584,11 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
                         )}
                         {/* With Back at the head, a list's name heads the list itself; its line about it is the list's first. */}
                         {on.back && on.title && <ListTitle>{on.title}</ListTitle>}
-                        {on.caption && <p className={`mb-5 max-w-[62ch] ${CAPTION}`}>{on.caption}</p>}
+                        {on.caption && <p className={`mb-5 ${CAPTION}`}>{on.caption}</p>}
                         {on.node}
                       </Radius.Provider>
                     </Look.Provider>
-                    </Held.Provider>
-                  </Settled.Provider>
+                  </Held.Provider>
                 </Notecard>
               )}
             </AnimatePresence>

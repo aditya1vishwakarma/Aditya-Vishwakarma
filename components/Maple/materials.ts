@@ -636,6 +636,7 @@ export function makeDaisyMaterial(u: SceneUniforms, atlas: THREE.Texture, shadow
       uEye: { value: SCENE_COLOURS.daisyEye.map((c) => rgb(c)) },
       uShadowCentre: { value: shadowCentre },
       uShadowReach: { value: shadowReach },
+      uSwayShare: { value: 1 },
     },
     side: THREE.DoubleSide,
     vertexShader: /* glsl */ `
@@ -647,6 +648,9 @@ export function makeDaisyMaterial(u: SceneUniforms, atlas: THREE.Texture, shadow
       uniform vec3 uPetal[${SCENE_COLOURS.petal.length * 2}]; // each colour in shade, then in sun
       uniform float uTime;
       uniform float uGust;
+      // Of the daisies that sway, the share still swaying: all at home, a few beside a pane. Each eases to a stand
+      // as the share passes its random number, so the field calms a flower at a time rather than all at once.
+      uniform float uSwayShare;
       ${NOISE_GLSL}
       ${GUST_GLSL}
       ${LOBES_GLSL}
@@ -666,7 +670,8 @@ export function makeDaisyMaterial(u: SceneUniforms, atlas: THREE.Texture, shadow
         float h = aFlower.x;
         vec2 c = position.xy;
         float wave = gustWave(aBase.xz);
-        float bend = aSway * (0.07 * sin(uTime * 2.3 + aFlower.z * 9.0 + aBase.x * 0.4) + 0.08 * uGust + 0.4 * wave);
+        float sways = aSway * (1.0 - smoothstep(uSwayShare, uSwayShare + 0.03, aFlower.z));
+        float bend = sways * (0.07 * sin(uTime * 2.3 + aFlower.z * 9.0 + aBase.x * 0.4) + 0.08 * uGust + 0.4 * wave);
         vec3 p = aBase + right * c.x * h * aFlower.w + vec3(0.0, c.y * h, 0.0);
         p.x += bend * h * c.y * c.y;
         p.y -= 0.3 * bend * bend * h * c.y;
