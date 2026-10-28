@@ -4,6 +4,7 @@ import { navHeight, navPlace } from '../Layout/Navbar';
 import { glassStyle } from '../UI/glass';
 import { toggleMuted, useMuted } from './music';
 import { useSafeArea } from './safeArea';
+import { useTouch } from './touch';
 
 const ROW = 'flex w-full items-center gap-3 rounded-full px-3 py-1.5 text-left';
 const ACT = `${ROW} italic transition-colors duration-300 hover:bg-white/35 focus-visible:bg-white/35 focus-visible:outline-none`;
@@ -43,19 +44,6 @@ const Mark: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     {children}
   </span>
 );
-
-/** Whether the screen is touched rather than pointed at: no hover, so no keys to show, and a tap to open. */
-const TOUCH = '(hover: none)';
-const useTouch = () => {
-  const [touch, setTouch] = useState(() => window.matchMedia(TOUCH).matches);
-  useEffect(() => {
-    const query = window.matchMedia(TOUCH);
-    const onChange = () => setTouch(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-  return touch;
-};
 
 /**
  * The page's controls, on the nav's glass in the one corner the page leaves

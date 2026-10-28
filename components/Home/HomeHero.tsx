@@ -7,7 +7,7 @@ import { seasonOf, type Season } from '../Maple/mapleConfig';
 import Navbar, { navBottom, navPlace } from '../Layout/Navbar';
 import { useSafeArea, type Insets } from './safeArea';
 import { MOBILE_MAX, isCompact } from '../../constants';
-import SectionPane, { VEIL_MS, type PaneBox, type PaneCard } from './SectionPane';
+import SectionPane, { VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
 import TextHaze from './TextHaze';
 import Controls from './Controls';
 import {
@@ -423,21 +423,19 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const edge = navPlace(margin, compact).right;
   const below = navBottom(margin, compact, safe) + (compact ? 12 : 16);
   const near = compact ? edge : READING_MARGIN;
+  // Work's rail of its parts gets room of its own on a desktop, and its pane is that much wider, so the list keeps its width.
+  const railGutter = !compact && section?.id === 'work' ? railRoom(width) : 0;
+  const listWidth = section ? paneWidth(section.size, width - safe.left - safe.right, edge) + railGutter : 0;
   const box: PaneBox | null = !section
     ? null
     : reading
       ? { top: near + safe.top, right: near + safe.right, bottom: near + safe.bottom, left: near + safe.left }
       : compact
         ? { top: below, right: edge + safe.right, bottom: edge + safe.bottom, left: edge + safe.left }
-        : {
-            top: below,
-            right: edge + safe.right,
-            bottom: edge + safe.bottom,
-            left: width - edge - safe.right - paneWidth(section.size, width - safe.left - safe.right, edge),
-          };
+        : { top: below, right: edge + safe.right, bottom: edge + safe.bottom, left: width - edge - safe.right - listWidth };
   // What a section's list leaves of the screen, from the left, for the tree — kept while reading, so the camera
   // doesn't move under the glass. A phone's pane covers it all, so the camera stays.
-  const clear = section && !compact ? Math.max(0.16, (width - edge - paneWidth(section.size, width, edge)) / width) : 1;
+  const clear = section && !compact ? Math.max(0.16, (width - edge - listWidth) / width) : 1;
 
   const card: PaneCard | null = !section
     ? null
@@ -522,6 +520,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
                 box={box}
                 layout={layoutOf}
                 radius={compact ? 30 : 44}
+                railGutter={railGutter}
                 onExpand={onExpand}
                 onBack={back}
                 onClose={close}

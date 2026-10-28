@@ -59,6 +59,27 @@ export const PANE_PAD = { sides: 'clamp(22px, 2.6vw, 40px)', bottom: 'clamp(24px
 const CAPTION = 'font-sans text-[15.5px] leading-relaxed text-charcoal/80';
 
 /**
+ * A list's rail of its parts, in the glass's right-hand padding: in the
+ * middle of it, or 4px in at the least. Its width, as drawn; how far a row
+ * lifted out under the pointer reaches past the list's edge; and the room
+ * kept between that and the rail.
+ */
+const RAIL_RIGHT = `max(4px, calc((${PANE_PAD.sides} - 18px) / 2))`;
+const RAIL = { width: 22, lift: 16, clear: 10 };
+
+/**
+ * The room a rail needs at the glass's right beyond the usual padding, for a
+ * screen this wide, so nothing on the list — not even a row lifted out under
+ * the pointer — reaches under it. Worked out as the CSS does `PANE_PAD.sides`
+ * and `RAIL_RIGHT`. The pane is made this much wider for it on a desktop.
+ */
+export const railRoom = (screenWidth: number) => {
+  const sides = Math.min(40, Math.max(22, 0.026 * screenWidth));
+  const right = Math.max(4, (sides - 18) / 2);
+  return Math.max(0, Math.ceil(right + RAIL.width + RAIL.clear + RAIL.lift - sides));
+};
+
+/**
  * Whether the pane, and the card on it, have come to rest: the glass slid in
  * and done changing size, and the card come in on it. Until then, what's
  * heavy to draw — its pictures, to be fetched and decoded — waits, so the
@@ -135,6 +156,8 @@ interface Props {
    */
   layout: string;
   radius: number;
+  /** Beyond the usual padding, the room kept at the right for a list's rail of its parts: `railRoom`, or none. */
+  railGutter?: number;
   onExpand: () => void;
   onBack: () => void;
   onClose: () => void;
@@ -367,7 +390,7 @@ const PartsRail: React.FC<{ scroller: React.RefObject<HTMLDivElement | null>; pa
       initial={{ opacity: 0 }}
       animate={{ opacity: 1, transition: { duration: 0.4, delay: 0.2 } }}
       className="absolute z-20 flex flex-col gap-2"
-      style={{ right: `max(4px, calc((${PANE_PAD.sides} - 18px) / 2))`, top: `calc(${HEAD_TOP} + ${HEAD_ROW} + 28px)`, bottom: PANE_PAD.bottom }}
+      style={{ right: RAIL_RIGHT, top: `calc(${HEAD_TOP} + ${HEAD_ROW} + 28px)`, bottom: PANE_PAD.bottom }}
     >
       {parts.map((p, i) => {
         const on = shape.at === i;
@@ -395,7 +418,7 @@ const PartsRail: React.FC<{ scroller: React.RefObject<HTMLDivElement | null>; pa
   );
 };
 
-const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onBack, onClose }) => {
+const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 0, onExpand, onBack, onClose }) => {
   const pane = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [settled, setSettled] = useState(false);
@@ -405,8 +428,8 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
 
   // What's asked for, and what's on show: a card (or none, between two), and the glass's size. What's on show
   // follows what's asked for a step at a time.
-  const asked = useRef({ card, box, layout });
-  asked.current = { card, box, layout };
+  const asked = useRef({ card, box, layout, railGutter });
+  asked.current = { card, box, layout, railGutter };
   const shown = useRef<{ key: string | null; box: PaneBox; layout: string; delay: number; width?: number }>({ key: card.key, box, layout, delay: 0 });
   const leaving = useRef(false);
   const moving = useRef(false);
@@ -416,13 +439,12 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
   const instant = useRef(!turns);
   instant.current = !turns;
 
-  /** How wide what's on the glass will be once the glass is in `box`: inside its sides, and its scrollbar if any. */
-  const widthIn = (b: PaneBox) => {
+  /** How wide what's on the glass will be once the glass is in `box`: inside its sides, a rail's room if it has one, and its scrollbar if any. */
+  const widthIn = (b: PaneBox, gutter: number) => {
     const el = scroller.current;
     if (!el) return undefined;
-    const style = getComputedStyle(el);
-    const sides = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
-    return Math.max(0, window.innerWidth - b.left - b.right - sides - (el.offsetWidth - el.clientWidth));
+    const side = parseFloat(getComputedStyle(el).paddingLeft) || 0;
+    return Math.max(0, window.innerWidth - b.left - b.right - 2 * side - gutter - (el.offsetWidth - el.clientWidth));
   };
 
   /** The card asked for comes on: early, made at its width while the glass is still on its way and fading in as it lands; or now. */
@@ -432,7 +454,7 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
     if (now.key !== null || !sameBox(want.box, now.box)) return;
     now.layout = want.layout;
     now.key = want.card.key;
-    now.width = early ? widthIn(want.box) : undefined;
+    now.width = early ? widthIn(want.box, want.card.parts ? want.railGutter : 0) : undefined;
     now.delay = early ? MOVE_MS / 1000 - 0.14 : leaving.current ? LEAVE : 0;
     redraw();
   }, []);
@@ -567,7 +589,14 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, onExpand, onB
           // A list with a rail by its scrollbar has no scrollbar: the rail says where the reader is, and is a way about.
           data-rail={on?.parts ? '' : undefined}
           className="pane-scroll absolute inset-0 overflow-y-auto"
-          style={{ overscrollBehavior: 'contain', paddingTop: HEAD_TOP, paddingInline: PANE_PAD.sides, paddingBottom: PANE_PAD.bottom }}
+          style={{
+            overscrollBehavior: 'contain',
+            paddingTop: HEAD_TOP,
+            paddingLeft: PANE_PAD.sides,
+            // A list with a rail: room kept for it, so nothing on the list reaches under it.
+            paddingRight: on?.parts && railGutter ? `calc(${PANE_PAD.sides} + ${railGutter}px)` : PANE_PAD.sides,
+            paddingBottom: PANE_PAD.bottom,
+          }}
         >
           {/* One cell for both cards, the one going and the one coming, as they overlap. */}
           <div className="grid grid-cols-[minmax(0,1fr)]">

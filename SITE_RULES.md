@@ -35,6 +35,12 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **From the list:** in the list's own pane, at the same size, so the glass never resizes for it. The head becomes Back and close, and the scene pauses while the photo is up.
 - **From expandedView:** in contentView.
 - **Between photos:** a plain quick fade, not the notecard's turn.
+- **On a touch screen** (a phone, or a tablet without a mouse), a photo is handled by touch (`components/Home/photoGestures.ts`):
+  - No arrow buttons. They're still there for screen readers.
+  - The photo takes the pane's whole width, to within 8px of the glass's sides.
+  - A swipe across steps to the next or the last photo: 56px across, or a quick flick. The next one slides in from the side it was swiped toward. A drag up or down does nothing.
+  - A pinch zooms up to 4×, and a double tap zooms to 2.5× where it's tapped, or back out. Zoomed, a drag moves the photo about, but never so far that a gap opens at an edge. The zoomed photo is clipped to its own room, below the head.
+  - A computer keeps its arrow buttons and keys.
 
 **The head** floats over what's on the glass. Whatever scrolls up under it blurs away progressively (three layers of blur, strongest at the top), with a touch of tint once anything is under it. Its height is fixed for each look, so nothing on the glass jumps.
 
@@ -57,6 +63,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **Edge to edge:** the page is drawn under a phone's status bar, notch and home bar (`viewport-fit=cover` in `index.html`), so the scene fills the whole screen.
   - Everything placed on the margins is placed inside the safe area: the nav, the controls, the pane and the type, each on its margin plus the inset on that side.
   - Script reads the insets with `useSafeArea` (`components/Home/safeArea.ts`); CSS uses `env(safe-area-inset-*)`. Both are zero on a screen without them.
+  - **In Safari on iOS 26** the strips under the status bar and behind the toolbar are painted by Safari, not the page. It paints them solid, in the colour of a full-width fixed element at that edge: here, the scene's container. Only ordinary, scrolling content shows through under them. So the moving scene doesn't reach behind the clock or the toolbar in a Safari tab; each strip is the scene's colour at that edge.
 
 ## Breakpoints
 
@@ -125,6 +132,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - **Past three selected works** (four in expandedView) the row becomes a horizontal carousel that snaps to each tile, with a sliver of the next one showing so it's plain there are more.
 - **A rail on the right** marks the two parts, Selected and Un-Selected: a line for each, as long as the part is tall, with its name set vertically along it. The part in view is darker, and each is a way to jump there. Any list can have one: mark its parts with `data-pane-part` and pass `parts` on its card.
   - The rail takes the scrollbar's place: a pane with one hides its scrollbar (`data-rail`, in `home.css`). It still scrolls by wheel, touch and keys.
+  - **On a desktop the rail has room of its own:** the list's right-hand padding grows by `railRoom` (`SectionPane.tsx`), about 19–29px depending on the screen's width. The pane is that much wider, so the list keeps its width. A row lifted under the pointer, which reaches 16px past the list's edge, still stops 10px short of the rail. A phone's pane is the screen's width, so there the rail sits in the padding as before.
 - Tiles and their pictures have 100%-smoothed (squircle) corners, and so does the lift.
 - **Un-Selected Works** is a section as distinct as a list of its own: its heading is the size of the pane's title, with its line about it. Each row has what it is and when beside its name and a line about it, as the old Works page had.
 

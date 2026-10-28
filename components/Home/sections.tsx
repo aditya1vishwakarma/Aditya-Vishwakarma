@@ -7,6 +7,8 @@ import type { Project } from '../../types';
 import Squircle from '../UI/Squircle';
 import { PANE_PAD, PANE_TITLE, usePaneHeld, usePaneLook, usePaneRadius, usePaneSettled, usePaneTitle } from './SectionPane';
 import { photoPath } from './routes';
+import { usePhotoGestures } from './photoGestures';
+import { useTouch } from './touch';
 
 const { useNavigate } = ReactRouterDOM as any;
 
@@ -485,22 +487,33 @@ const STEP_BUTTON =
   'flex h-11 w-11 items-center justify-center rounded-full border border-charcoal/10 bg-white/60 text-charcoal/75 shadow-sm transition-colors duration-300 ' +
   'hover:bg-white/90 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
 
+/** On a touch screen, a photo reaches past the pane's padding, to this near the glass's sides. */
+const PHOTO_BLEED = 8;
+
 /**
  * One photo, open on its own to look at: as large as the pane allows, with
  * the ones either side a press or an arrow key away. They load meanwhile, so
- * the next is in hand.
+ * the next is in hand. On a touch screen there are no arrows to press: the
+ * photo takes the pane's whole width, a swipe steps along, and a pinch or a
+ * double tap zooms in (`photoGestures.ts`). The arrows are still there for
+ * a screen reader.
  */
 export const PhotoPiece: React.FC<{ index: number }> = ({ index }) => {
   const navigate = useNavigate();
   const root = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const photo = useRef<HTMLImageElement>(null);
   const room = usePaneRoom(root);
   const settled = usePaneSettled();
   const current = useIsPresent();
   const named = usePaneTitle();
+  const touch = useTouch();
   const [shown, setShown] = useState(false);
   const count = PHOTOS.length;
   // Each step along stands in for the last, so Back still goes straight to the grid.
   const move = useCallback((by: number) => navigate(photoPath((index + by + count) % count), { replace: true }), [index, count, navigate]);
+  // Only the photo on show answers a touch, not the one going.
+  usePhotoGestures(touch && current, stage, photo, move);
 
   useEffect(() => {
     preload(PHOTOS[(index + 1) % count].full);
@@ -525,21 +538,33 @@ export const PhotoPiece: React.FC<{ index: number }> = ({ index }) => {
       <h2 {...named} className="sr-only">
         Photo {index + 1} of {count}
       </h2>
-      <div className="relative flex min-h-0 flex-1 items-center justify-center px-14">
+      {/* On a touch screen, the photo's room reaches nearly to the glass's sides; zoomed in, the photo is clipped to
+          that room, rather than spilling under the head. */}
+      <div
+        ref={stage}
+        className={
+          touch
+            ? 'relative flex min-h-0 flex-1 touch-none select-none items-center justify-center rounded-[14px] data-[zoomed]:overflow-hidden'
+            : 'relative flex min-h-0 flex-1 items-center justify-center px-14'
+        }
+        style={touch ? { marginInline: `calc(${PHOTO_BLEED}px - ${PANE_PAD.sides})` } : undefined}
+      >
         {settled && (
           <img
+            ref={photo}
             src={PHOTOS[index].full}
             alt={`Photo ${index + 1} of ${count}`}
             decoding="async"
+            draggable={false}
             onLoad={() => setShown(true)}
             className={`max-h-full max-w-full rounded-[14px] object-contain shadow-[0_22px_44px_-20px_rgba(0,0,0,0.45)] ${shown ? 'opacity-100' : 'opacity-0'}`}
             style={{ transition: 'opacity 0.45s ease' }}
           />
         )}
-        <button type="button" aria-label="Previous photo" onClick={() => move(-1)} className={`${STEP_BUTTON} absolute left-0 top-1/2 -translate-y-1/2`}>
+        <button type="button" aria-label="Previous photo" onClick={() => move(-1)} className={touch ? 'sr-only' : `${STEP_BUTTON} absolute left-0 top-1/2 -translate-y-1/2`}>
           <ChevronLeft size={24} strokeWidth={1.5} />
         </button>
-        <button type="button" aria-label="Next photo" onClick={() => move(1)} className={`${STEP_BUTTON} absolute right-0 top-1/2 -translate-y-1/2`}>
+        <button type="button" aria-label="Next photo" onClick={() => move(1)} className={touch ? 'sr-only' : `${STEP_BUTTON} absolute right-0 top-1/2 -translate-y-1/2`}>
           <ChevronRight size={24} strokeWidth={1.5} />
         </button>
       </div>
