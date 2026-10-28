@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useIsPresent } from 'framer-motion';
 import * as ReactRouterDOM from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Instagram, Linkedin, Mail, Twitter } from 'lucide-react';
-import { BLOG_POSTS, PHOTOS, PROJECTS, SOCIAL_LINKS } from '../../constants';
+import { BLOG_POSTS, MOBILE_MAX, PHOTOS, PROJECTS, SHORT_MAX, SOCIAL_LINKS } from '../../constants';
 import type { Project } from '../../types';
 import Squircle from '../UI/Squircle';
 import { PANE_PAD, PANE_TITLE, usePaneHeld, usePaneLook, usePaneRadius, usePaneSettled, usePaneTitle } from './SectionPane';
@@ -29,23 +29,125 @@ const MUSEUM = '/#/mindmuseum';
 const DETAIL = 'font-sans text-[10.5px] uppercase tracking-[0.15em] roomy:text-[11.5px] roomy:tracking-[0.16em]';
 const META = `${DETAIL} text-charcoal/75`;
 const BODY = 'font-sans text-[15.5px] leading-relaxed text-charcoal/80';
+// A row's line about it: on a phone, a step down from its name, so the name leads.
+const LINE = 'font-sans text-[14px] leading-[1.45] text-charcoal/75 roomy:text-[15.5px] roomy:leading-relaxed roomy:text-charcoal/80';
 
 /**
- * A row or a tile pointed at is lifted onto the site's off-white. On a list's
- * frost that's plain to see; on the thickened glass of a list opened out, a
- * faint edge and shadow show it too.
+ * A row or a tile pointed at, or tapped (`useTapLift`), is lifted onto the
+ * site's off-white. On a list's frost that's plain to see; on the thickened
+ * glass of a list opened out, a faint edge and shadow show it too. A phone's
+ * rows are on cards of their own instead (`CardFill`).
  */
-const LIFT = 'transition-[background-color,box-shadow] duration-300 hover:bg-background/80 focus-visible:bg-background/80';
-const LIFT_EDGED = `${LIFT} hover:shadow-[0_0_0_1px_rgba(51,51,51,0.08),0_10px_28px_-14px_rgba(0,0,0,0.22)] focus-visible:shadow-[0_0_0_1px_rgba(51,51,51,0.08),0_10px_28px_-14px_rgba(0,0,0,0.22)]`;
+const LIFT =
+  'transition-[background-color,box-shadow] duration-300 roomy:hover:bg-background/80 roomy:focus-visible:bg-background/80 ' +
+  'roomy:data-[lifted]:bg-background/80 roomy:data-[lifted]:duration-0';
+const LIFT_EDGED = `${LIFT} roomy:hover:shadow-[0_0_0_1px_rgba(51,51,51,0.08),0_10px_28px_-14px_rgba(0,0,0,0.22)] roomy:focus-visible:shadow-[0_0_0_1px_rgba(51,51,51,0.08),0_10px_28px_-14px_rgba(0,0,0,0.22)] roomy:data-[lifted]:shadow-[0_0_0_1px_rgba(51,51,51,0.08),0_10px_28px_-14px_rgba(0,0,0,0.22)]`;
 const lift = (look: 'select' | 'view') => (look === 'view' ? LIFT_EDGED : LIFT);
 
-/** A card's arrow: hidden until the card is pointed at, then sliding in from the left, as on the home page's cards. */
-const CardArrow: React.FC<{ size?: number; className?: string }> = ({ size = 22, className = '' }) => (
+/** Held down on a touch screen, a row stays lifted, rather than iOS peeking at its page or selecting its words. */
+const HELD = '[@media(hover:none)]:select-none [@media(hover:none)]:[-webkit-touch-callout:none]';
+
+/**
+ * A tap on a row lifts it, as pointing at it does: a beat after the finger
+ * lands, so a list scrolled by a finger on a row doesn't flash, or as it
+ * lifts, for a quick tap. Chosen, the row is held lifted a moment before its
+ * piece opens, so it's plain which was chosen; and it stays lifted as the
+ * list goes. A tap that doesn't choose it — the finger held, say — lets it go.
+ */
+const TAP = { lift: 70, hold: 110, letGo: 300 };
+let pressed: { row: HTMLElement; timer: number } | null = null;
+let opening: { row: HTMLElement; timer: number } | null = null;
+
+const setLifted = (row: HTMLElement, on: boolean) => {
+  if (on) row.dataset.lifted = '';
+  else delete row.dataset.lifted;
+};
+
+const letGo = () => {
+  if (!pressed) return;
+  window.clearTimeout(pressed.timer);
+  setLifted(pressed.row, false);
+  pressed = null;
+};
+
+/** The handlers for a row of a list, to lift it as it's tapped and open its piece once it's been seen to lift. */
+const useTapLift = () => {
+  const navigate = useNavigate();
+  return useMemo(
+    () => ({
+      onPointerDown: (e: React.PointerEvent<HTMLAnchorElement>) => {
+        if (e.pointerType === 'mouse') return;
+        letGo();
+        const row = e.currentTarget;
+        pressed = { row, timer: window.setTimeout(() => setLifted(row, true), TAP.lift) };
+      },
+      // The finger scrolled the list instead.
+      onPointerCancel: letGo,
+      onPointerUp: (e: React.PointerEvent<HTMLAnchorElement>) => {
+        if (pressed?.row !== e.currentTarget) return;
+        window.clearTimeout(pressed.timer);
+        setLifted(pressed.row, true);
+        pressed.timer = window.setTimeout(letGo, TAP.letGo);
+      },
+      onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (pressed?.row !== e.currentTarget) return;
+        // Followed by the router after the hold, as any link within the site is (HomeHero), so Back counts the step.
+        e.preventDefault();
+        window.clearTimeout(pressed.timer);
+        const row = pressed.row;
+        const to = row.getAttribute('href')!.slice(1);
+        pressed = null;
+        // Another chosen before the last had opened: this one opens instead.
+        if (opening) {
+          window.clearTimeout(opening.timer);
+          if (opening.row !== row) setLifted(opening.row, false);
+        }
+        opening = { row, timer: window.setTimeout(() => ((opening = null), navigate(to)), TAP.hold) };
+      },
+    }),
+    [navigate],
+  );
+};
+
+/**
+ * On a phone, where nothing points at them, the un-selected works and the
+ * posts are cards from the first: each on a fill of its own, so it's plain
+ * each is a way in — the fill's enough, with no arrow, so its words have the
+ * room. A card keeps to the column, its edges in line with the list's name
+ * and the selected works' pictures, and its words sit 16px in. Its corners
+ * are the museum card's on a phone.
+ */
+const CARD_RADIUS = 18;
+
+/**
+ * A phone's card, behind its row — which is `isolate`d, so it sits over the
+ * row's own background and under what's on it. Tapped, it lifts to the
+ * off-white at once (`useTapLift`).
+ */
+const CardFill: React.FC = () => (
+  <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 roomy:hidden">
+    <Squircle
+      radius={CARD_RADIUS}
+      smoothing={1}
+      className="h-full w-full bg-wash/50 transition-colors duration-300 group-hover:bg-background/80 group-focus-visible:bg-background/80 group-data-[lifted]:bg-background/80 group-data-[lifted]:duration-0"
+    />
+  </span>
+);
+
+/**
+ * A card's arrow: hidden until the card is pointed at, then sliding in from the left, as on the home page's cards.
+ * Or always `shown`, where nothing will point at it — a touch screen — and it's the sign there's somewhere to go.
+ */
+const CardArrow: React.FC<{ size?: number; className?: string; shown?: boolean }> = ({ size = 22, className = '', shown = false }) => (
   <ArrowRight
     size={size}
     strokeWidth={1.5}
     aria-hidden="true"
-    className={`shrink-0 text-moss opacity-0 -translate-x-3 transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 ${className}`}
+    className={`shrink-0 text-moss transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${
+      shown
+        ? ''
+        : 'opacity-0 -translate-x-3 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 group-data-[lifted]:translate-x-0 group-data-[lifted]:opacity-100'
+    } ${className}`}
   />
 );
 
@@ -124,8 +226,8 @@ const preload = (src: string) => {
   img.decode?.().catch(() => {});
 };
 
-/** Whether there's room for a desktop's lists: `roomy:` in index.css, for what's sized in script. */
-const ROOMY = '(width >= 600px) and (height >= 500px)';
+/** Whether there's room for a desktop's lists, the pane beside the tree rather than over it: `roomy:` in index.css, for what's sized in script. */
+const ROOMY = `(width >= ${MOBILE_MAX}px) and (height >= ${SHORT_MAX}px)`;
 const useRoomy = () => {
   const [roomy, setRoomy] = useState(() => window.matchMedia(ROOMY).matches);
   useEffect(() => {
@@ -209,13 +311,14 @@ const SelectedWork: React.FC<{ p: Project; look: 'select' | 'view' }> = ({ p, lo
   // The picture's corners, and the tile's: the picture's and the room round it.
   const picture = roomy ? 18 : 12;
   const tile = picture + (roomy ? 10 : 8);
+  const tap = useTapLift();
   return (
-    <a href={page(p.path)} className="group relative flex items-center gap-4 p-2 focus-visible:outline-none roomy:block roomy:p-2.5">
-      {/* Lifted, pointed at: the site's off-white, in a squircle as the glass is — with a faint edge and a shadow on
-          the thickened glass of an expanded view, drawn round the squircle itself. */}
+    <a href={page(p.path)} {...tap} className={`group relative flex items-center gap-4 p-2 focus-visible:outline-none roomy:block roomy:p-2.5 ${HELD}`}>
+      {/* Lifted, pointed at or tapped: the site's off-white, in a squircle as the glass is — with a faint edge and a
+          shadow on the thickened glass of an expanded view, drawn round the squircle itself. */}
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 ${
+        className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 group-data-[lifted]:opacity-100 group-data-[lifted]:duration-0 ${
           look === 'view' ? '[filter:drop-shadow(0_0_0.75px_rgba(51,51,51,0.3))_drop-shadow(0_10px_16px_rgba(0,0,0,0.1))]' : ''
         }`}
       >
@@ -244,11 +347,12 @@ const SelectedWork: React.FC<{ p: Project; look: 'select' | 'view' }> = ({ p, lo
 
 /**
  * The selected works, and then the un-selected, a section of their own: a
- * row each, what and when beside its name and a line about it, cut to two
- * lines on a phone.
+ * row each, what and when beside its name and a line about it. On a phone,
+ * the un-selected are a card each: its name, and its line cut to two.
  */
 export const WorkSection: React.FC = () => {
   const look = usePaneLook();
+  const tap = useTapLift();
   const selected = PROJECTS.filter((p) => p.isSelected);
   const more = PROJECTS.filter((p) => !p.isSelected && !p.isRedirect);
   const archive = PROJECTS.find((p) => p.isRedirect);
@@ -282,20 +386,24 @@ export const WorkSection: React.FC = () => {
             {archive?.title ?? 'Un-Selected Works'}
           </h2>
           {archive && <p className={`mt-4 ${BODY}`}>{archive.description}</p>}
-          <ul className="mt-4 roomy:mt-6">
+          <ul className="mt-5 flex flex-col gap-2 roomy:mt-6 roomy:block">
             {more.map((p) => (
-              <li key={p.path} className="border-b border-charcoal/10 last:border-b-0">
-                <a href={page(p.path)} className={`group -mx-4 flex items-center gap-6 rounded-[20px] px-4 py-4 focus-visible:outline-none roomy:py-6 ${lift(look)}`}>
+              <li key={p.path} className="roomy:border-b roomy:border-charcoal/10 roomy:last:border-b-0">
+                <a
+                  href={page(p.path)}
+                  {...tap}
+                  className={`group relative isolate flex items-center gap-3 rounded-[20px] p-4 focus-visible:outline-none roomy:-mx-4 roomy:gap-6 roomy:py-6 ${lift(look)} ${HELD}`}
+                >
+                  <CardFill />
                   <div className="hidden w-[26%] shrink-0 roomy:block">
                     <span className={`block ${META}`}>{p.date}</span>
                     <span className={`mt-1 block ${DETAIL} text-moss`}>{p.category}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`mb-1.5 roomy:hidden ${META}`}>{details(p)}</p>
-                    <h3 className="font-serif text-[20px] leading-snug text-charcoal transition-transform duration-300 group-hover:translate-x-1 roomy:text-[clamp(24px,2.3vw,32px)]">
+                    <h3 className="font-serif text-[20px] leading-[1.2] text-charcoal transition-transform duration-300 group-hover:translate-x-1 roomy:text-[clamp(24px,2.3vw,32px)] roomy:leading-snug">
                       {p.title}
                     </h3>
-                    <p className={`mt-1.5 line-clamp-2 roomy:mt-3 roomy:line-clamp-none ${BODY}`}>{p.description}</p>
+                    <p className={`mt-1 line-clamp-2 roomy:mt-3 roomy:line-clamp-none ${LINE}`}>{p.description}</p>
                   </div>
                   <CardArrow size={24} className="hidden roomy:block" />
                 </a>
@@ -322,16 +430,18 @@ const CATEGORIES = ['All', ...Array.from(new Set(BLOG_POSTS.map((p) => p.categor
 const CHIP =
   'rounded-full px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-300 ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
-const CHIP_ON = 'bg-white/65 text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_1px_2px_rgba(0,0,0,0.06),0_3px_10px_-3px_rgba(0,0,0,0.12)]';
-const CHIP_OFF = 'text-charcoal/65 hover:bg-white/30 hover:text-charcoal';
+const CHIP_ON = 'bg-wash/65 text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_1px_2px_rgba(0,0,0,0.06),0_3px_10px_-3px_rgba(0,0,0,0.12)]';
+const CHIP_OFF = 'text-charcoal/65 hover:bg-wash/30 hover:text-charcoal';
 
 /**
  * The posts, under a compact choice of what they're on — chips, the one
  * chosen on a pill as the nav's open section is. Each post: when, and how
- * long to read; its name; a line about it, cut to two on a phone.
+ * long to read; its name; a line about it. On a phone, a card each: its
+ * name, its line cut to two, and how long it is to read.
  */
 export const WritingSection: React.FC = () => {
   const look = usePaneLook();
+  const tap = useTapLift();
   const [only, setOnly] = useState('All');
   const posts = only === 'All' ? BLOG_POSTS : BLOG_POSTS.filter((p) => p.category === only);
   return (
@@ -344,18 +454,26 @@ export const WritingSection: React.FC = () => {
           </button>
         ))}
       </div>
-      <ul className="divide-y divide-charcoal/10 border-y border-charcoal/10">
+      <ul className="flex flex-col gap-2 roomy:block roomy:divide-y roomy:divide-charcoal/10 roomy:border-y roomy:border-charcoal/10">
         {posts.map((post) => (
           <li key={post.path}>
-            <a href={page(post.path)} className={`group -mx-4 my-1 block rounded-[20px] px-4 py-4 focus-visible:outline-none roomy:py-6 ${lift(look)}`}>
-              <p className={META}>
-                {post.date} · {post.readTime}
-              </p>
-              <div className="mt-2 flex items-start justify-between gap-4 roomy:mt-2.5">
-                <h3 className="font-serif text-[21px] leading-[1.15] tracking-[-0.015em] text-charcoal roomy:text-[29px] roomy:leading-[1.1]">{post.title}</h3>
-                <CardArrow className="mt-1.5 hidden roomy:block" />
+            <a
+              href={page(post.path)}
+              {...tap}
+              className={`group relative isolate flex items-center gap-3 rounded-[20px] p-4 focus-visible:outline-none roomy:-mx-4 roomy:my-1 roomy:block roomy:py-6 ${lift(look)} ${HELD}`}
+            >
+              <CardFill />
+              <div className="min-w-0 flex-1">
+                <p className={`mb-2.5 hidden roomy:block ${META}`}>
+                  {post.date} · {post.readTime}
+                </p>
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="font-serif text-[20px] leading-[1.15] tracking-[-0.015em] text-charcoal roomy:text-[29px] roomy:leading-[1.1]">{post.title}</h3>
+                  <CardArrow className="mt-1.5 hidden roomy:block" />
+                </div>
+                <p className={`mt-1 line-clamp-2 max-w-[60ch] roomy:mt-3 roomy:line-clamp-none ${LINE}`}>{post.excerpt}</p>
+                <p className={`mt-2.5 roomy:hidden ${META}`}>{post.readTime}</p>
               </div>
-              <p className={`mt-2 line-clamp-2 max-w-[60ch] roomy:mt-3 roomy:line-clamp-none ${BODY}`}>{post.excerpt}</p>
             </a>
           </li>
         ))}
@@ -484,8 +602,8 @@ export const PhotosSection: React.FC = () => {
 };
 
 const STEP_BUTTON =
-  'flex h-11 w-11 items-center justify-center rounded-full border border-charcoal/10 bg-white/60 text-charcoal/75 shadow-sm transition-colors duration-300 ' +
-  'hover:bg-white/90 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
+  'flex h-11 w-11 items-center justify-center rounded-full border border-charcoal/10 bg-wash/60 text-charcoal/75 shadow-sm transition-colors duration-300 ' +
+  'hover:bg-wash/90 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
 
 /** On a touch screen, a photo reaches past the pane's padding, to this near the glass's sides. */
 const PHOTO_BLEED = 8;
@@ -592,45 +710,75 @@ const PORTRAIT = PHOTOS.find((p) => p.preview.includes('/pfp.'));
 const ABOUT_BODY = 'font-sans text-[14px] leading-[1.5] text-charcoal/80 roomy:text-[clamp(13.5px,1.75vh,15px)]';
 
 /**
- * The way to the museum, nested in the glass's bottom corners: as far from
- * the glass's edges at the sides as at the foot, its own corners smoothed as
- * the glass's are, and concentric with them — its radius the glass's less
- * the room between.
+ * The museum's shelves, cut out of the room: a render on a black wall and a
+ * white one, the difference kept as transparency, so only the shelving and
+ * what stands on it are left. About 24 KB, so it's kept with the site rather
+ * than on R2.
+ */
+const MUSEUM_SHELVES = '/museum/shelves.webp';
+
+/**
+ * The shelves' edges fade into the glass, as the room runs off both edges of the screen. They're cut out without
+ * the room's own shadows, which pool into smudges on the glass; a soft drop shadow, worked out from their outline,
+ * stands them off it instead.
+ */
+const SHELVES_SHADOW = 'drop-shadow-[0_5px_7px_rgba(40,52,20,0.18)]';
+const SHELVES_FADE: React.CSSProperties = {
+  maskImage: 'linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent)',
+  WebkitMaskImage: 'linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent)',
+  maskComposite: 'intersect',
+  WebkitMaskComposite: 'source-in',
+};
+
+/**
+ * The way to the museum, at the foot of About, on the column's margins as
+ * everything above it is: an invitation in, in the moss of a link, and under
+ * it the shelves themselves, as wide as the column, straight on the glass.
+ * Pointing at it lifts it onto the off-white, reaching past the column as a
+ * list's rows do. On a touch screen the arrow stays out, as there's no
+ * pointer to bring it.
  */
 const MuseumCard: React.FC = () => {
-  const radius = usePaneRadius();
-  const room = Math.round(radius * 0.4);
+  const radius = usePaneRadius() === 44 ? 28 : 18;
+  const touch = useTouch();
   return (
-    <a
-      href={MUSEUM}
-      className="group mt-auto block focus-visible:outline-none"
-      style={{ marginInline: `calc(${room}px - ${PANE_PAD.sides})`, marginBottom: `calc(${room}px - ${PANE_PAD.bottom})` }}
-    >
+    <a href={MUSEUM} className="group @container relative mt-auto block focus-visible:outline-none">
       <Squircle
-        radius={radius - room}
+        radius={radius}
         smoothing={1}
-        className="flex items-center justify-between gap-6 bg-white/35 px-5 py-3.5 transition-colors duration-300 group-hover:bg-background/80 group-focus-visible:bg-background/80 roomy:px-6 roomy:py-4"
-      >
-        <span>
-          <span className="block font-serif text-[20px] leading-tight text-moss roomy:text-[22px]">My Mind Museum</span>
-          <span className={`mt-1 block ${ABOUT_BODY}`}>A Mood Board: Some artifacts, interfaces, music, and projects that inspire me.</span>
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-3 bg-background/80 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
+      />
+      <span className="relative block">
+        <span className="mb-1 flex items-center gap-3">
+          <span className="font-serif text-[20px] leading-tight text-moss roomy:text-[22px]">Step Inside: My Mind Museum</span>
+          <CardArrow size={22} shown={touch} />
         </span>
-        <CardArrow size={24} />
-      </Squircle>
+        {/* Taller as the column widens, so the shelves keep their shape; never so short a phone can't make them out.
+            On a short screen, About may take some of it back (`SHELVES_LEAST`). */}
+        <span data-shelves="" className="relative block h-[clamp(120px,24cqw,300px)]">
+          <span className="absolute inset-0" style={SHELVES_FADE}>
+            <PaneImage src={MUSEUM_SHELVES} grow={SHELVES_SHADOW} />
+          </span>
+        </span>
+      </span>
     </a>
   );
 };
 
 /** The least width About needs for its picture beside the approaches, rather than under them. */
 const PICTURE_BESIDE = 400;
-/** The picture's shape beside the approaches, as tall as they are: a little taller than it's wide. */
+/** The picture's shape beside the approaches, as tall as they are: a little taller than it's wide, and never more than half again. */
 const PICTURE_SHAPE = 1.15;
+const PICTURE_TALLEST = 1.5;
+/** The least the museum's shelves are cut to, on a short screen, so About still fits: a band of them. */
+const SHELVES_LEAST = 64;
 
 /**
  * Who I am, at a glance: a few lines across the top; under them, a picture of
  * me with how I work stacked beside it, the picture as tall as the two; and,
- * at the foot, the way to the museum. Where there isn't the width, one under
- * another, the picture last.
+ * at the foot, the way to the museum, with whatever room is over left above
+ * it. Where there isn't the width, one under another, the picture last.
  */
 export const AboutSection: React.FC = () => {
   const root = useRef<HTMLDivElement>(null);
@@ -653,15 +801,19 @@ export const AboutSection: React.FC = () => {
   }, []);
 
   // The picture's width, chosen so that, as tall as the approaches beside it, it keeps its shape — a narrower
-  // picture leaves them more width, and fewer lines. Then narrower still, if it must be, so About never scrolls.
+  // picture leaves them more width, and fewer lines. Then narrower still, if it must be, so About never scrolls,
+  // though never past its tallest shape; and if even that isn't enough, the museum's shelves give up some of their
+  // height.
   useLayoutEffect(() => {
     const pic = picture.current;
     const text = approaches.current;
     const whole = root.current;
-    if (!beside || !pic || !text || !whole) return;
+    const shelves = whole?.querySelector<HTMLElement>('[data-shelves]');
+    if (!beside || !pic || !text || !whole || !shelves) return;
     let live = true;
     const fit = () => {
       if (!live) return;
+      shelves.style.height = '';
       const row = (pic.parentElement as HTMLElement).clientWidth;
       const least = Math.round(row * 0.3);
       const set = (w: number) => (pic.style.width = `${w}px`);
@@ -673,13 +825,24 @@ export const AboutSection: React.FC = () => {
         if (off < miss) [miss, best] = [off, w];
       }
       set(best);
-      while (room !== null && whole.offsetHeight > room + 1 && best > least) set((best = Math.max(least, best - 8)));
+      while (room !== null && whole.offsetHeight > room + 1 && best > least) {
+        const next = Math.max(least, best - 8);
+        set(next);
+        if (text.offsetHeight / next > PICTURE_TALLEST) {
+          set(best);
+          break;
+        }
+        best = next;
+      }
+      const over = room === null ? 0 : whole.offsetHeight - room;
+      if (over > 1) shelves.style.height = `${Math.max(SHELVES_LEAST, shelves.offsetHeight - over)}px`;
       setWidth(best);
     };
     fit();
     document.fonts?.ready.then(fit);
     return () => {
       live = false;
+      shelves.style.height = '';
     };
   }, [beside, across, room]);
 

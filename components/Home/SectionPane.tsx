@@ -4,6 +4,7 @@ import { ArrowLeft, Maximize2, X } from 'lucide-react';
 import Squircle from '../UI/Squircle';
 import CircularScrollIndicator from '../Writing/CircularScrollIndicator';
 import { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP, GLASS_EDGE, GLASS_TINT } from '../UI/glass';
+import { isCompact } from '../../constants';
 
 const motion = motionComponent as any;
 
@@ -38,8 +39,8 @@ export const PANE_TITLE = 'font-serif text-[clamp(30px,3.1vw,46px)] font-normal 
 /** How long the glass takes to thicken, as something opens to read, and to thin again. */
 export const VEIL_MS = 900;
 
-/** Over the glass's own 60% tint, this makes it 90% solid. */
-const VEIL = 'rgba(251, 250, 248, 0.75)';
+/** Over the glass's own tint, this makes it 94% solid, light or dark. */
+const VEIL = 'var(--glass-veil)';
 
 /** The glass taking a new size, with nothing on it. */
 const MOVE_MS = 440;
@@ -61,22 +62,27 @@ const CAPTION = 'font-sans text-[15.5px] leading-relaxed text-charcoal/80';
 /**
  * A list's rail of its parts, in the glass's right-hand padding: in the
  * middle of it, or 4px in at the least. Its width, as drawn; how far a row
- * lifted out under the pointer reaches past the list's edge; and the room
- * kept between that and the rail.
+ * lifted out, pointed at or tapped, reaches past the list's edge — a
+ * desktop's row, or a phone's selected work (its cards keep to the edge);
+ * and the room kept between that and the rail.
  */
 const RAIL_RIGHT = `max(4px, calc((${PANE_PAD.sides} - 18px) / 2))`;
-const RAIL = { width: 22, lift: 16, clear: 10 };
+const RAIL = { width: 22, lift: 16, liftCompact: 8, clear: 10 };
 
 /**
  * The room a rail needs at the glass's right beyond the usual padding, for a
- * screen this wide, so nothing on the list — not even a row lifted out under
- * the pointer — reaches under it. Worked out as the CSS does `PANE_PAD.sides`
- * and `RAIL_RIGHT`. The pane is made this much wider for it on a desktop.
+ * screen this size, so nothing on the list — not even a row lifted out —
+ * reaches under it. Worked out as the CSS does `PANE_PAD.sides` and
+ * `RAIL_RIGHT`; where the pane fills the screen (`isCompact`, the other side
+ * of `roomy:`) the list has a phone's rows. On a desktop the pane is made
+ * this much wider for it; a phone's pane is the screen's width, so there the
+ * list gives it up.
  */
-export const railRoom = (screenWidth: number) => {
+export const railRoom = (screenWidth: number, screenHeight: number) => {
   const sides = Math.min(40, Math.max(22, 0.026 * screenWidth));
   const right = Math.max(4, (sides - 18) / 2);
-  return Math.max(0, Math.ceil(right + RAIL.width + RAIL.clear + RAIL.lift - sides));
+  const reach = isCompact(screenWidth, screenHeight) ? RAIL.liftCompact : RAIL.lift;
+  return Math.max(0, Math.ceil(right + RAIL.width + RAIL.clear + reach - sides));
 };
 
 /**
@@ -166,8 +172,8 @@ interface Props {
 const sameBox = (a: PaneBox, b: PaneBox) => a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left;
 
 const buttonLook =
-  'flex h-10 items-center justify-center rounded-full border border-charcoal/10 bg-white/45 text-charcoal/75 transition-colors duration-300 ' +
-  'hover:border-charcoal/20 hover:bg-white/75 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
+  'flex h-10 items-center justify-center rounded-full border border-charcoal/10 bg-wash/45 text-charcoal/75 transition-colors duration-300 ' +
+  'hover:border-charcoal/20 hover:bg-wash/75 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
 
 const IconButton: React.FC<{ label: string; onClick: () => void; children: React.ReactNode }> = ({ label, onClick, children }) => (
   <button type="button" onClick={onClick} aria-label={label} title={label} className={`${buttonLook} w-10`}>
@@ -191,10 +197,10 @@ const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 /**
  * A list's name over the list itself: under Back, or, for a name that scrolls
- * away, in the head's row — level with its buttons, and clear of them.
+ * away, in the head's row — level with its buttons, and `clear` of them.
  */
-const ListTitle: React.FC<{ inRow?: boolean; children: React.ReactNode }> = ({ inRow, children }) => (
-  <div className={`flex items-center ${inRow ? 'pr-[104px]' : ''}`} style={{ minHeight: inRow ? HEAD_ROW : undefined, marginBottom: inRow ? HEAD_BOTTOM : 16 }}>
+const ListTitle: React.FC<{ inRow?: boolean; clear?: number; children: React.ReactNode }> = ({ inRow, clear, children }) => (
+  <div className="flex items-center" style={{ minHeight: inRow ? HEAD_ROW : undefined, marginBottom: inRow ? HEAD_BOTTOM : 16, paddingRight: inRow ? clear : undefined }}>
     <h2 {...usePaneTitle()} className={`outline-none ${PANE_TITLE}`}>
       {children}
     </h2>
@@ -238,7 +244,7 @@ const Haze: React.FC<{ tinted: boolean; edge: boolean }> = ({ tinted, edge }) =>
     ))}
     <div
       className="absolute inset-0 transition-opacity duration-300"
-      style={{ background: 'linear-gradient(to bottom, rgba(251, 250, 248, 0.55), rgba(251, 250, 248, 0))', opacity: tinted ? 1 : 0 }}
+      style={{ background: 'linear-gradient(to bottom, var(--glass-fade), var(--glass-fade-end))', opacity: tinted ? 1 : 0 }}
     />
   </div>
 );
@@ -418,6 +424,45 @@ const PartsRail: React.FC<{ scroller: React.RefObject<HTMLDivElement | null>; pa
   );
 };
 
+/**
+ * How tall a list's glass must be to hold it, for a pane that's only as tall as what's on it (Writing, Contact):
+ * the list laid out unseen, off the screen, at the width its glass will have, under the same head and inside the
+ * same padding. Measured again as the fonts land and the window resizes, so the glass can take its height before
+ * it sets off — the list is never laid out again on the glass to find it. Its pictures stay unloaded.
+ */
+export const PaneMeasure: React.FC<{ width: number; caption?: React.ReactNode; onHeight: (height: number) => void; children: React.ReactNode }> = ({
+  width,
+  caption,
+  onHeight,
+  children,
+}) => {
+  const sheet = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = sheet.current;
+    if (!el) return;
+    const look = () => onHeight(Math.ceil(el.getBoundingClientRect().height));
+    look();
+    const ro = new ResizeObserver(look);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [onHeight]);
+  return (
+    <div
+      ref={sheet}
+      aria-hidden="true"
+      inert
+      className="pointer-events-none invisible fixed left-[-10000px] top-0"
+      style={{ width, paddingTop: HEAD_TOP, paddingInline: PANE_PAD.sides, paddingBottom: PANE_PAD.bottom }}
+    >
+      <Settled.Provider value={false}>
+        <div style={{ height: `calc(${HEAD_ROW} + ${HEAD_BOTTOM})` }} />
+        {caption && <p className={`mb-5 ${CAPTION}`}>{caption}</p>}
+        {children}
+      </Settled.Provider>
+    </div>
+  );
+};
+
 const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 0, onExpand, onBack, onClose }) => {
   const pane = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -538,6 +583,12 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
   const on = now.key === card.key ? card : null;
   // The glass thickens as soon as something's chosen to read, while the list goes and it takes its new size.
   const reading = card.look === 'view';
+  const expands = card.look === 'select' && !!card.expandable;
+  // What the list has of the glass's right beyond the usual padding: a rail's room, if it has one.
+  const gutter = on?.parts ? railGutter : 0;
+  // A name in the head's row keeps clear of its buttons — 40px each, 8px apart, and 16px of room — which sit in the
+  // usual padding, so a rail's room is already part of the way.
+  const titleClear = Math.max(0, (expands ? 88 : 40) + 16 - gutter);
 
   // A new card on show: start it from the top, and take the reader's focus to what names it.
   useLayoutEffect(() => {
@@ -594,7 +645,7 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
             paddingTop: HEAD_TOP,
             paddingLeft: PANE_PAD.sides,
             // A list with a rail: room kept for it, so nothing on the list reaches under it.
-            paddingRight: on?.parts && railGutter ? `calc(${PANE_PAD.sides} + ${railGutter}px)` : PANE_PAD.sides,
+            paddingRight: gutter ? `calc(${PANE_PAD.sides} + ${gutter}px)` : PANE_PAD.sides,
             paddingBottom: PANE_PAD.bottom,
           }}
         >
@@ -607,7 +658,11 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
                     <Look.Provider value={on.look}>
                       <Radius.Provider value={radius}>
                         {on.titleScrolls && !on.back ? (
-                          on.title && <ListTitle inRow>{on.title}</ListTitle>
+                          on.title && (
+                            <ListTitle inRow clear={titleClear}>
+                              {on.title}
+                            </ListTitle>
+                          )
                         ) : (
                           <div aria-hidden="true" style={{ height: `calc(${HEAD_ROW} + ${HEAD_BOTTOM})` }} />
                         )}
@@ -640,7 +695,7 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
               </AnimatePresence>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {card.look === 'select' && card.expandable && (
+              {expands && (
                 <IconButton label="Fill the screen" onClick={onExpand}>
                   <Maximize2 size={17} strokeWidth={1.75} />
                 </IconButton>

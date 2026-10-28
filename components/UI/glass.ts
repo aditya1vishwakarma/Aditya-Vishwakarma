@@ -1,18 +1,18 @@
 import type React from 'react';
 import { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP } from '../Museum/glass';
-import { THEMES } from '../Museum/museumTheme';
 
 /**
  * The site's frosted glass, for anything that floats over a picture: the
- * light recipe the mood board's cards and the museum share — a cream tint, a
+ * recipe the mood board's cards and the museum share — a cream tint, a
  * blur that thickens the frost and lifts its colours, a bevelled rim, a soft
  * shadow and a fine grain.
  */
 
 export { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP };
 
-export const GLASS_TINT = THEMES.light.glass;
-export const GLASS_EDGE = THEMES.light.glassEdge;
+/** Tint and rim are the page's variables (index.css), so they follow the light or dark look. */
+export const GLASS_TINT = 'var(--glass-tint)';
+export const GLASS_EDGE = 'var(--glass-edge)';
 
 /** Tint, frost, rim and shadow in one, for glass whose outline isn't clipped (a clip-path would cut the shadow away). */
 export const glassStyle: React.CSSProperties = {

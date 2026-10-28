@@ -4,12 +4,13 @@ import { AnimatePresence } from 'framer-motion';
 import * as ReactRouterDOM from 'react-router-dom';
 import MapleScene, { type MapleHandle } from '../Maple/MapleScene';
 import { seasonOf, type Season } from '../Maple/mapleConfig';
-import Navbar, { navBottom, navPlace } from '../Layout/Navbar';
+import Navbar, { MenuSpine, navBottom, navPlace } from '../Layout/Navbar';
 import { useSafeArea, type Insets } from './safeArea';
 import { MOBILE_MAX, isCompact } from '../../constants';
-import SectionPane, { VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
+import SectionPane, { PaneMeasure, VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
 import TextHaze from './TextHaze';
 import Controls from './Controls';
+import { usePaintTheme } from './theme';
 import {
   AboutSection,
   ContactSection,
@@ -75,16 +76,44 @@ const MEADOW = 'linear-gradient(180deg, #4FADE8 0%, #73BDEC 30%, #A6D4EE 49%, #A
 type PaneSize = 'wide' | 'medium' | 'narrow';
 
 /**
- * Each section's pane: its name and a line about it, how wide, and whether it can be opened out to fill the
- * screen — only those with plenty to look at.
+ * About's share of the screen's width: the least at which it fits without a scroll on a laptop (1512×860) and a
+ * desktop (1920×1080), its photo at a natural size — no more than half again as tall as it's wide. Narrower, and its
+ * lines run on until it scrolls; at a third of the screen it still runs 50px over on a laptop.
  */
-const SECTIONS: { id: SectionId; label: string; title: string; caption?: React.ReactNode; size: PaneSize; expandable: boolean; Content: React.FC }[] = [
-  { id: 'about', label: 'About', title: 'About', size: 'medium', expandable: false, Content: AboutSection },
+const ABOUT_SHARE = 0.41;
+/** The screen a share is worked out for, at the least: a laptop's, 1512px wide. About is never narrower than 620px. */
+const SHARE_LEAST = 1512;
+
+/** Writing's pane, only as tall as its list, stays wide enough to hold its own on a big screen: a third of a 27". */
+const WRITING_MOST = { width: 880 };
+
+/**
+ * Each section's pane: its name and a line about it, how wide (a share of the screen's, where its size's own rule
+ * won't do; and, for one that has a ceiling, the most it grows to), whether it's only as tall as what's on it
+ * (`fits`), and whether it can be opened out to fill the screen — only those with plenty to look at.
+ *
+ * A pane that `fits` is as tall as its whole list, up to the screen's room, then scrolls. Writing's is as tall as
+ * every post, whichever category is chosen, so choosing one never moves the glass under the reader's finger.
+ */
+const SECTIONS: {
+  id: SectionId;
+  label: string;
+  title: string;
+  caption?: React.ReactNode;
+  size: PaneSize;
+  share?: number;
+  most?: { width: number; height?: number };
+  fits?: boolean;
+  expandable: boolean;
+  Content: React.FC;
+}[] = [
+  { id: 'about', label: 'About', title: 'About', size: 'medium', share: ABOUT_SHARE, fits: true, expandable: false, Content: AboutSection },
   { id: 'work', label: 'Work', title: 'Selected Works', size: 'wide', expandable: true, Content: WorkSection },
-  { id: 'writing', label: 'Blog', title: 'Writing', caption: WRITING_CAPTION, size: 'medium', expandable: false, Content: WritingSection },
+  { id: 'writing', label: 'Blog', title: 'Writing', caption: WRITING_CAPTION, size: 'medium', most: WRITING_MOST, fits: true, expandable: false, Content: WritingSection },
   { id: 'photos', label: 'Photos', title: 'Photos', caption: PHOTOS_CAPTION, size: 'wide', expandable: true, Content: PhotosSection },
-  { id: 'contact', label: 'Contact', title: 'Contact', size: 'narrow', expandable: false, Content: ContactSection },
+  { id: 'contact', label: 'Contact', title: 'Contact', size: 'narrow', fits: true, expandable: false, Content: ContactSection },
 ];
+type Section = (typeof SECTIONS)[number];
 
 const NAV_ITEMS = SECTIONS.map(({ id, label }) => ({ id, label }));
 
@@ -99,12 +128,15 @@ const WORK_PARTS = [
   { id: 'unselected', label: 'Un-Selected' },
 ];
 
-/** A heavy section takes two thirds of the screen's width; the others less. Never more than fits `inset` in from either side. */
+/**
+ * A heavy section takes two thirds of the screen's width; the others less. A narrow one widens a little on a big
+ * screen (a fifth of it, up to 520px), so it never reads as a sliver. Never more than fits `inset` in from either side.
+ */
 const paneWidth = (size: PaneSize, width: number, inset: number) => {
   const most = width - 2 * inset;
   if (size === 'wide') return Math.min(most, 0.66 * width);
   if (size === 'medium') return Math.min(most, Math.max(460, 0.46 * width));
-  return Math.min(most, 420);
+  return Math.min(most, Math.max(420, Math.min(520, 0.2 * width)));
 };
 
 const useViewport = () => {
@@ -134,6 +166,8 @@ const GUTTER = 48;
 const TITLE_LEAST = 13;
 /** Between the title and the name below it, on a phone. */
 const STACK_GAP = 18;
+/** Between the top of the title's line and the menu's spine above it: about 16px above its capitals. */
+const SPINE_LIFT = 8;
 
 type Delay = React.CSSProperties & { '--delay': string };
 const delay = (s: number): Delay => ({ '--delay': `${s}s` });
@@ -145,16 +179,18 @@ const delay = (s: number): Delay => ({ '--delay': `${s}s` });
  * run into each other, both are set smaller, in proportion, until they fit
  * side by side (the title no smaller than 13px; the name gives way after
  * that). On a phone the title stands above the name instead, flush left.
+ * `onTop` hears how high the two reach, from the bottom of the screen.
  */
-const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact: boolean; smallTitle: boolean; stage: Stage; viewport: string }> = ({
-  shown,
-  margin,
-  safe,
-  compact,
-  smallTitle,
-  stage,
-  viewport,
-}) => {
+const HeroText: React.FC<{
+  shown: boolean;
+  margin: number;
+  safe: Insets;
+  compact: boolean;
+  smallTitle: boolean;
+  stage: Stage;
+  viewport: string;
+  onTop: (top: number) => void;
+}> = ({ shown, margin, safe, compact, smallTitle, stage, viewport, onTop }) => {
   const name = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLParagraphElement>(null);
   const [place, setPlace] = useState<{ name: number; title: number; nameFit: number; titleFit: number; small: boolean; key: string } | null>(null);
@@ -191,6 +227,7 @@ const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact
       const small = parseFloat(getComputedStyle(t).fontSize) < 24;
       const key = `${viewport}:${nameBottom.toFixed(2)}:${titleBottom.toFixed(2)}:${nameBox.width.toFixed(1)}:${titleBox.width.toFixed(1)}`;
       setPlace((p) => (p?.key === key ? p : { name: nameBottom, title: titleBottom, nameFit, titleFit, small, key }));
+      onTop(Math.max(nameBottom + nameBox.height, titleBottom + titleBox.height));
     };
     measure();
     // Measured again once the fonts are in: until then the lines are set in whatever stood in for them.
@@ -198,7 +235,7 @@ const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact
       raf = requestAnimationFrame(measure);
     });
     return () => cancelAnimationFrame(raf);
-  }, [margin, safe, compact, viewport]);
+  }, [margin, safe, compact, viewport, onTop]);
 
   const hazeOn = shown && stage !== 'waiting';
   // Under 24px, by its own measure or set smaller to fit, the title is small text.
@@ -246,6 +283,7 @@ interface HomeHeroProps {
 const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, overlay = true, controls = true }) => {
   const { width, height } = useViewport();
   // On a phone, the scene runs under the status bar and the home bar; what's placed on the margins keeps clear of them.
+  usePaintTheme();
   const safe = useSafeArea();
   // The pane's and the nav's phone layout, for a screen narrow or short; the name and title's, for a narrow one.
   const compact = isCompact(width, height);
@@ -258,6 +296,8 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const handle = given ?? own;
   const gust = useCallback(() => handle.current?.gust(), [handle]);
   const swapSeason = useCallback(() => setSeason((s) => (s === 'autumn' ? 'summer' : 'autumn')), []);
+  // How high the name and the title reach: on a phone, the menu's spine stands just above them.
+  const [textTop, setTextTop] = useState<number | null>(null);
 
 
   const [ready, setReady] = useState(false);
@@ -417,22 +457,44 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
     return () => window.clearTimeout(timer);
   }, [still]);
 
+  // How tall each list that `fits` needs its glass, measured unseen at the width its glass will have (`PaneMeasure`).
+  const [fitted, setFitted] = useState<Partial<Record<SectionId, number>>>({});
+  const onFitted = useMemo(
+    () =>
+      Object.fromEntries(
+        SECTIONS.filter((s) => s.fits).map((s) => [s.id, (h: number) => setFitted((f) => (f[s.id] === h ? f : { ...f, [s.id]: h }))]),
+      ) as Partial<Record<SectionId, (h: number) => void>>,
+    [],
+  );
+
   // A list's pane sits below the nav, its edges where the nav's right edge does, on the margin: two thirds of the
   // screen for a heavy section, less for the others. To read, it fills the screen inside the reading margin. A
   // phone's fills the screen either way.
   const edge = navPlace(margin, compact).right;
   const below = navBottom(margin, compact, safe) + (compact ? 12 : 16);
   const near = compact ? edge : READING_MARGIN;
-  // Work's rail of its parts gets room of its own on a desktop, and its pane is that much wider, so the list keeps its width.
-  const railGutter = !compact && section?.id === 'work' ? railRoom(width) : 0;
-  const listWidth = section ? paneWidth(section.size, width - safe.left - safe.right, edge) + railGutter : 0;
+  // Work's rail of its parts gets room of its own. On a desktop its pane is that much wider, so the list keeps its
+  // width; a phone's pane fills the screen, so there the list gives the room up.
+  const railGutter = section?.id === 'work' ? railRoom(width, height) : 0;
+  // A pane that takes a share of the screen is never narrower than that share of a laptop's (`SHARE_LEAST`), so a
+  // smaller window lays it out as the laptop does rather than running its lines on until it scrolls.
+  const paneWidthOf = (s: Section) => {
+    const across = width - safe.left - safe.right;
+    const own = s.share ? Math.min(across - 2 * edge, Math.max(s.share * SHARE_LEAST, s.share * across)) : paneWidth(s.size, across, edge);
+    return Math.min(own, s.most?.width ?? Infinity);
+  };
+  const listWidth = section ? paneWidthOf(section) + railGutter : 0;
+  // A pane with a ceiling, or only as tall as what's on it, keeps its top under the nav and its right edge on the
+  // margin; where it's shorter than the room, its foot lifts off the margin.
+  const fit = section?.fits ? fitted[section.id] : undefined;
+  const listBottom = Math.max(edge + safe.bottom, height - below - Math.min(section?.most?.height ?? Infinity, fit ?? Infinity));
   const box: PaneBox | null = !section
     ? null
     : reading
       ? { top: near + safe.top, right: near + safe.right, bottom: near + safe.bottom, left: near + safe.left }
       : compact
         ? { top: below, right: edge + safe.right, bottom: edge + safe.bottom, left: edge + safe.left }
-        : { top: below, right: edge + safe.right, bottom: edge + safe.bottom, left: width - edge - safe.right - listWidth };
+        : { top: below, right: edge + safe.right, bottom: listBottom, left: width - edge - safe.right - listWidth };
   // What a section's list leaves of the screen, from the left, for the tree — kept while reading, so the camera
   // doesn't move under the glass. A phone's pane covers it all, so the camera stays.
   const clear = section && !compact ? Math.max(0.16, (width - edge - listWidth) / width) : 1;
@@ -507,7 +569,16 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
 
       {overlay && (
         <>
-          <HeroText shown={!section} margin={margin} safe={safe} compact={narrow} smallTitle={smallTitle} stage={stage} viewport={`${width}x${height}`} />
+          <HeroText
+            shown={!section}
+            margin={margin}
+            safe={safe}
+            compact={narrow}
+            smallTitle={smallTitle}
+            stage={stage}
+            viewport={`${width}x${height}`}
+            onTop={setTextTop}
+          />
 
           {/* A press anywhere on the scene puts a list away. Reading, the margins are only margins. */}
           {section && !reading && <div aria-hidden="true" className="fixed inset-0 z-30" onPointerDown={close} />}
@@ -528,7 +599,30 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             )}
           </AnimatePresence>
 
+          {/* The lists only as tall as what's on them, laid out unseen to find how tall that is. A phone's pane fills the
+              screen whatever's on it. */}
+          {!compact &&
+            SECTIONS.filter((s) => s.fits).map((s) => (
+              <PaneMeasure key={s.id} width={paneWidthOf(s)} caption={s.caption} onHeight={onFitted[s.id]!}>
+                <s.Content />
+              </PaneMeasure>
+            ))}
+
           {controls && route.mode === 'home' && <Controls margin={margin} compact={compact} onGust={gust} onSeason={swapSeason} />}
+
+          {/* On a phone at home, the menu is the spine above the title; the nav comes down from the top once a pane is open. */}
+          {compact && textTop !== null && (
+            <MenuSpine
+              items={NAV_ITEMS}
+              onSelect={choose}
+              onIntent={onIntent}
+              margin={margin}
+              foot={textTop + SPINE_LIFT}
+              height={height}
+              away={!!section}
+              className={stage === 'waiting' ? 'invisible' : 'hero-nav-in'}
+            />
+          )}
 
           <Navbar
             items={NAV_ITEMS}
@@ -539,7 +633,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             onIntent={onIntent}
             margin={margin}
             compact={compact}
-            away={reading}
+            away={reading || (compact && !section)}
             className={stage === 'waiting' ? 'invisible' : 'hero-nav-in'}
           />
         </>

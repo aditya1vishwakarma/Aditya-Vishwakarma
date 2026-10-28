@@ -7,10 +7,13 @@
    iPad (mini, 744), so no device lands on the threshold itself. Keep this in
    sync with MOBILE_MAX in constants.ts — the JS branches read from there. */
 @custom-variant md (@media (width >= 740px));
-/* Room for a desktop's lists: wide enough — a tablet, or anything about its
-   width — and tall enough, which a phone held sideways isn't. Its pane may
-   still fill the screen (isCompact in constants.ts, from 740px). */
-@custom-variant roomy (@media (width >= 600px) and (height >= 500px));
+/* Room for a desktop's lists: the pane sits beside the tree rather than
+   filling the screen over it — wide enough (a tablet and up) and tall enough,
+   which a phone held sideways isn't. The other side of isCompact in
+   constants.ts (MOBILE_MAX, SHORT_MAX): keep them together. */
+@custom-variant roomy (@media (width >= 740px) and (height >= 500px));
+/* The dark look, chosen from the controls (components/Home/theme.ts). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
     --color-background: #FBFAF8;
@@ -22,6 +25,38 @@
     --font-serif: "Newsreader", serif;
 
     --radius-squircle: 24px;
+
+    /* White, for the washes laid over glass: turned down to a slate in the dark. */
+    --color-wash: #FFFFFF;
+    /* The nav's and the controls' type in the dark, to stand out on the slate glass. */
+    --color-paper: #FBFAF5;
+    /* Charcoal in either look: type on a white pill. */
+    --color-ink: #333333;
+}
+
+/* The site's glass: its tint, its rim, and the thickening veil over it to read on. */
+:root {
+    --glass-tint: rgba(251, 250, 248, 0.60);
+    --glass-edge: inset 0 1px 1px rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 -12px 26px -20px rgba(0,0,0,0.22);
+    --glass-veil: rgba(251, 250, 248, 0.85);
+    --glass-fade: rgba(251, 250, 248, 0.55);
+    --glass-fade-end: rgba(251, 250, 248, 0);
+}
+
+/* Dark: the colours turned over where they're named, so every charcoal, background and moss follows. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-background: #2C3138;
+    --color-charcoal: #F3EDE2;
+    --color-moss: #9CCB5E;
+    --color-moss-light: #A8D56B;
+    --color-wash: #6B7585;
+
+    --glass-tint: rgba(38, 42, 49, 0.62);
+    --glass-edge: inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 -12px 26px -20px rgba(0,0,0,0.45);
+    --glass-veil: rgba(44, 49, 56, 0.84);
+    --glass-fade: rgba(44, 49, 56, 0.55);
+    --glass-fade-end: rgba(44, 49, 56, 0);
 }
 
 @layer utilities {

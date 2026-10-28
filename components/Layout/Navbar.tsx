@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion as motionComponent, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { glassStyle } from '../UI/glass';
+import { useMenuSide } from '../Home/menuSide';
 import { useSafeArea, type Insets } from '../Home/safeArea';
 
 const motion = motionComponent as any;
@@ -54,13 +55,13 @@ export const navHeight = (compact: boolean) => (compact ? 46 : 2 * (INSET + LINK
 /** Where the nav's pane ends, going down. */
 export const navBottom = (margin: number, compact: boolean, safe?: Insets) => navPlace(margin, compact, safe).top + navHeight(compact);
 
-/** A link's text, and a faint pill under it while it's pointed at. */
+/** A link's text, and a faint pill under it while it's pointed at. On its white pill, it's charcoal in either look. */
 const LINK =
-  'relative block rounded-full font-sans font-medium text-[rgba(51,51,51,0.78)] transition-colors duration-300 ' +
-  'hover:bg-white/30 hover:text-charcoal focus-visible:bg-white/30 focus-visible:text-charcoal focus-visible:outline-none ' +
-  'aria-[current=true]:text-charcoal aria-[current=true]:hover:bg-transparent';
+  'relative block rounded-full font-sans font-medium text-[rgba(51,51,51,0.78)] transition-colors duration-300 dark:text-paper ' +
+  'hover:bg-wash/30 hover:text-charcoal focus-visible:bg-wash/30 focus-visible:text-charcoal focus-visible:outline-none ' +
+  'aria-[current=true]:text-ink aria-[current=true]:hover:bg-transparent dark:aria-[current=true]:text-ink';
 
-/** The pill under the open section's link: from one link to the next, it slides across as the section changes. */
+/** The pill under the open section's link: from one link to the next, it slides across as the section changes. White in either look. */
 const Current: React.FC = () => (
   <motion.span
     layoutId="nav-current"
@@ -69,6 +70,23 @@ const Current: React.FC = () => (
     transition={{ type: 'spring', stiffness: 420, damping: 36 }}
   />
 );
+
+/** A folded menu closes on a press anywhere outside it, or Escape. */
+const useDismiss = (open: boolean, setOpen: (open: boolean) => void, root: React.RefObject<HTMLElement | null>) => {
+  useEffect(() => {
+    if (!open) return;
+    const elsewhere = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('pointerdown', elsewhere);
+    window.addEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('pointerdown', elsewhere);
+      window.removeEventListener('keydown', key);
+    };
+  }, [open, setOpen, root]);
+};
 
 const SmallName: React.FC<{ onClick: () => void; compact: boolean }> = ({ onClick, compact }) => (
   <motion.button
@@ -80,7 +98,7 @@ const SmallName: React.FC<{ onClick: () => void; compact: boolean }> = ({ onClic
     transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
     className="overflow-hidden whitespace-nowrap text-left"
   >
-    <span className={`block font-serif leading-none tracking-tight text-charcoal ${compact ? 'pl-2.5 pr-3 text-[17px]' : 'pl-[13px] pr-[14px] text-[19px]'}`}>
+    <span className={`block font-serif leading-none tracking-tight text-charcoal dark:text-paper ${compact ? 'pl-2.5 pr-3 text-[17px]' : 'pl-[13px] pr-[14px] text-[19px]'}`}>
       Aditya <span className="text-moss tracking-[-0.02em]">Vishwakarma</span>
     </span>
   </motion.button>
@@ -97,21 +115,7 @@ const SmallName: React.FC<{ onClick: () => void; compact: boolean }> = ({ onClic
 const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHome, onIntent, margin, compact = false, away = false, className = '' }) => {
   const [open, setOpen] = useState(false);
   const root = React.useRef<HTMLElement>(null);
-
-  // The folded menu closes on a press anywhere else, or Escape.
-  useEffect(() => {
-    if (!open) return;
-    const elsewhere = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('pointerdown', elsewhere);
-    window.addEventListener('keydown', key);
-    return () => {
-      window.removeEventListener('pointerdown', elsewhere);
-      window.removeEventListener('keydown', key);
-    };
-  }, [open]);
+  useDismiss(open, setOpen, root);
   useEffect(() => {
     if (!compact || away) setOpen(false);
   }, [compact, away]);
@@ -168,7 +172,7 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
           aria-expanded={open}
           aria-controls="nav-menu"
           aria-label={open ? 'Close menu' : 'Menu'}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-charcoal"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-charcoal dark:text-paper"
         >
           {open ? <X size={20} strokeWidth={1.75} /> : <Menu size={20} strokeWidth={1.75} />}
         </button>
@@ -182,16 +186,17 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.94, y: -6, visibility: 'hidden' }}
             transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-            className="mt-2 flex min-w-[176px] origin-top-right flex-col items-end gap-0.5 rounded-[22px] p-[6px]"
+            className="mt-2 flex w-[208px] origin-top-right flex-col rounded-[32px] p-[6px]"
             style={glassStyle}
           >
+            {/* Each row fills the glass's width and is 52px tall, so a tap anywhere on it lands; its corners are the glass's less the padding. */}
             {items.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => select(item.id)}
                   aria-current={active === item.id ? 'true' : undefined}
-                  className={`${LINK} px-4 py-2.5 text-[17px] leading-[1.2]`}
+                  className={`${LINK} flex h-[52px] w-full items-center justify-end px-[22px] text-[18px] leading-[1.2] active:bg-wash/40`}
                 >
                   {active === item.id && <Current />}
                   <span className="relative">{item.label}</span>
@@ -202,6 +207,137 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
         )}
       </AnimatePresence>
     </nav>
+  );
+};
+
+/** The spine: a 44 × 104 button in 3px of glass. */
+const SPINE = { width: 50, height: 110 };
+/** Between the spine and its list. */
+const SPINE_GAP = 8;
+/** Each of the list's rows, and the glass round them: the rows' 24px corners in 8px make the glass's 32px. */
+const SPINE_ROW = 56;
+const SPINE_PAD = 8;
+
+/** A link in the spine's list: its name in Newsreader, centred in a row as wide as the glass. */
+const SPINE_LINK =
+  'flex h-14 w-full items-center justify-center rounded-[24px] font-serif text-[28px] leading-none tracking-[-0.01em] text-charcoal/85 dark:text-paper ' +
+  'transition-colors duration-300 hover:bg-wash/30 hover:text-charcoal focus-visible:bg-wash/30 focus-visible:text-charcoal focus-visible:outline-none active:bg-wash/40';
+
+interface MenuSpineProps {
+  items: NavItem[];
+  onSelect: (id: string) => void;
+  onIntent?: (id: string) => void;
+  /** The type's margin: the spine stands on it. */
+  margin: number;
+  /** From the bottom of the screen to the spine's foot: just above the name and the title. */
+  foot: number;
+  /** The screen's height, to keep the open list on it. */
+  height: number;
+  /** Off its side of the screen, out of the way: while a pane is open. */
+  away: boolean;
+  className?: string;
+}
+
+/**
+ * A phone's menu at home: a pill set like a book's spine, standing on the
+ * type's margin just above the title, on whichever side the visitor has chosen
+ * (`menuSide.ts`). Its word runs down it on the right and up it on the left,
+ * turned 90° and 270°, so the letters' tops face the nearer edge either way.
+ * A tap opens the list beside it, centred on it, and the spine reads Close in
+ * the same place. While a pane is open it moves off its side of the screen,
+ * and the nav at the top takes over.
+ */
+export const MenuSpine: React.FC<MenuSpineProps> = ({ items, onSelect, onIntent, margin, foot, height, away, className = '' }) => {
+  const [open, setOpen] = useState(false);
+  const root = React.useRef<HTMLElement>(null);
+  useDismiss(open, setOpen, root);
+  useEffect(() => {
+    if (away) setOpen(false);
+  }, [away]);
+
+  const left = useMenuSide() === 'left';
+  const safe = useSafeArea();
+  const edge = margin + (left ? safe.left : safe.right);
+  // The list runs from the pane's edge to 8px short of the spine, centred on the spine as far as the screen allows.
+  const inset = navPlace(margin, true).right;
+  const listEdge = edge + SPINE.width + SPINE_GAP;
+  const listFar = inset + (left ? safe.right : safe.left);
+  const tall = items.length * SPINE_ROW + 2 * SPINE_PAD;
+  const middle = height - foot - SPINE.height / 2;
+  const top = Math.max(inset + safe.top, Math.min(middle - tall / 2, height - inset - safe.bottom - tall));
+
+  const select = (id: string) => {
+    setOpen(false);
+    onIntent?.(id);
+    onSelect(id);
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="dim"
+            aria-hidden="true"
+            className="fixed inset-0 z-40 bg-[rgba(24,36,48,0.14)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+      </AnimatePresence>
+      <nav ref={root} aria-label="Sections" inert={away}>
+        {/* `translate` to move it away, as the nav does: its arrival holds `transform`. */}
+        <div
+          className={`fixed z-50 flex rounded-full p-[3px] ${className}`}
+          style={{
+            ...glassStyle,
+            bottom: foot,
+            left: left ? edge : undefined,
+            right: left ? undefined : edge,
+            translate: away ? `calc(${left ? -1 : 1} * (100% + ${edge}px)) 0` : '0 0',
+            transition: 'translate 0.6s cubic-bezier(0.32, 0.72, 0, 1)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="spine-menu"
+            aria-label={open ? 'Close menu' : 'Menu'}
+            className="flex h-[104px] w-11 items-center justify-center rounded-full text-charcoal transition-colors dark:text-paper duration-300 active:bg-wash/40"
+          >
+            <span aria-hidden="true" className={`flex items-center gap-2 text-[16px] font-medium leading-none [writing-mode:vertical-rl] ${left ? 'rotate-180' : ''}`}>
+              {open ? <X size={16} strokeWidth={1.9} className="rotate-90" /> : <Menu size={16} strokeWidth={1.9} className="rotate-90" />}
+              {open ? 'Close' : 'Menu'}
+            </span>
+          </button>
+        </div>
+        <AnimatePresence>
+          {open && (
+            /* Scale only, as the nav's menu: glass with a backdrop blur mustn't sit under a fade. */
+            <motion.ul
+              id="spine-menu"
+              initial={{ scale: 0.94, x: left ? -8 : 8 }}
+              animate={{ scale: 1, x: 0 }}
+              exit={{ scale: 0.94, x: left ? -8 : 8, visibility: 'hidden' }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              className={`fixed z-50 flex flex-col rounded-[32px] ${left ? 'origin-left' : 'origin-right'}`}
+              style={{ ...glassStyle, top, padding: SPINE_PAD, left: left ? listEdge : listFar, right: left ? listFar : listEdge }}
+            >
+              {items.map((item) => (
+                <li key={item.id}>
+                  <button type="button" onClick={() => select(item.id)} className={SPINE_LINK}>
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+      </nav>
+    </>
   );
 };
 
