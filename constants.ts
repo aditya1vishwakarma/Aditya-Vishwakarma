@@ -224,7 +224,7 @@ export const PHOTOS: { preview: string; full: string }[] = [
 ];
 
 export const SOCIAL_LINKS = {
-  instagram: 'https://www.instagram.com/aditya.pictures/',
+  instagram: 'https://www.instagram.com/madebyadityav/',
   twitter: 'https://x.com/adityav__',
   linkedin: 'https://www.linkedin.com/in/adityavishwakarma1/',
   email: 'mailto:aditya1vishwakarma@gmail.com'

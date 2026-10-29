@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { advance, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { PACE, PALETTES, SCENE_COLOURS, SHOT, TREE, type Season } from './mapleConfig';
+import { EVENING, PACE, PALETTES, SCENE_COLOURS, SHOT, TREE, type Season } from './mapleConfig';
 import {
   createUniforms,
   makeCloudMaterial,
@@ -30,9 +30,10 @@ import Flights from './Flights';
 import InkPass from './InkPass';
 
 /**
- * A maple on a knoll at noon, idling in the wind — drawn rather than
- * rendered. The tree sways; every so often a gust runs through it, lifts a
- * leaf or two away along a line of wind, and lets them fall to the grass.
+ * A maple on a knoll at noon — or, in dark mode, in the evening — idling in
+ * the wind, drawn rather than rendered. The tree sways; every so often a gust
+ * runs through it, lifts a leaf or two away along a line of wind, and lets
+ * them fall to the grass.
  *
  * Expects a Canvas with `flat` (the scene paints its own colours) that it
  * can take over the drawing of — ideally with `frameloop="never"`, so the
@@ -380,10 +381,24 @@ const useSeason = (uniforms: SceneUniforms, season: Season) => {
   });
 };
 
+/** Evening comes on, and goes, as a sunset would: over a few seconds, eased at either end, not a cut. Then it rests. */
+const useDusk = (uniforms: SceneUniforms, dusk: boolean) => {
+  const at = useRef(uniforms.uDusk.value);
+  useFrame((_, dt) => {
+    const want = dusk ? 1 : 0;
+    if (at.current === want) return;
+    const by = Math.min(dt, 1 / 20) / EVENING.turn;
+    at.current = want > at.current ? Math.min(want, at.current + by) : Math.max(want, at.current - by);
+    uniforms.uDusk.value = THREE.MathUtils.smoothstep(at.current, 0, 1);
+  });
+};
+
 /* ─── The scene ────────────────────────────────────────────────── */
 
 const MapleScene: React.FC<{
   season: Season;
+  /** Evening (dark mode): a sunset's sky, and the land lit by the moon. Turns over a few seconds when it changes. */
+  dusk?: boolean;
   freeCamera?: boolean;
   /** Field of view, top to bottom, in degrees; the shot is framed round it. */
   fov?: number;
@@ -400,12 +415,14 @@ const MapleScene: React.FC<{
   /** Called once, when the scene has drawn its first frames. */
   onReady?: () => void;
   handle?: React.MutableRefObject<MapleHandle | null>;
-}> = ({ season, freeCamera = false, fov = SHOT.fov, clear = 1, still = false, paused = false, onReady, handle }) => {
+}> = ({ season, dusk = false, freeCamera = false, fov = SHOT.fov, clear = 1, still = false, paused = false, onReady, handle }) => {
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
   const get = useThree((s) => s.get);
 
   const initialSeason = useRef(season).current;
+  // Opened in dark mode, it's evening from the first frame: the light only turns when it's changed.
+  const initialDusk = useRef(dusk).current;
   const world = useMemo(() => {
     const model = buildMaple();
     const atlas = makeLeafAtlas();
@@ -413,7 +430,7 @@ const MapleScene: React.FC<{
     const daisyAtlas = makeDaisyAtlas();
     const groveAtlas = makeGroveAtlas();
     const puffAtlas = makePuffAtlas();
-    const uniforms = createUniforms(initialSeason);
+    const uniforms = createUniforms(initialSeason, initialDusk);
 
     // Where the crown's shadow falls on level ground at the tree's foot, and how far it can reach.
     const sun = uniforms.uCastSun.value;
@@ -465,12 +482,12 @@ const MapleScene: React.FC<{
         daisies: makeDaisyMaterial(uniforms, daisyAtlas, shadowCentre, reach + 0.5),
         grove: makeGroveMaterial(uniforms, groveAtlas),
         clouds: makeCloudMaterial(uniforms, puffAtlas),
-        nearRidge: makeRidgeMaterial(SCENE_COLOURS.ridgeNear, 0.42),
-        farRidge: makeRidgeMaterial(SCENE_COLOURS.ridgeFar, 0.55),
-        sky: makeSkyMaterial(),
+        nearRidge: makeRidgeMaterial(uniforms, SCENE_COLOURS.ridgeNear, 0.42),
+        farRidge: makeRidgeMaterial(uniforms, SCENE_COLOURS.ridgeFar, 0.55),
+        sky: makeSkyMaterial(uniforms),
       },
     };
-  }, [initialSeason]);
+  }, [initialSeason, initialDusk]);
 
   useEffect(
     () => () => {
@@ -541,6 +558,7 @@ const MapleScene: React.FC<{
 
   useWind(world.wind, world.model, world.uniforms);
   useSeason(world.uniforms, season);
+  useDusk(world.uniforms, dusk);
 
   useEffect(() => {
     world.wind.held = still;

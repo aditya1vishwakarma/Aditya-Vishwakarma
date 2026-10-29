@@ -4,7 +4,8 @@ import { useLayoutEffect, useSyncExternalStore } from 'react';
  * The site's look, light or dark: light, until the visitor turns it over from
  * the controls. Kept in this browser, so it's as they left it next visit. The
  * choice is made on the page's root (data-theme), where index.css turns the
- * colours over; nothing else needs to know. The museum keeps its own.
+ * colours over; and dark is evening in the maple scene (HomeHero passes it
+ * on). The museum keeps its own.
  */
 export type SiteTheme = 'light' | 'dark';
 

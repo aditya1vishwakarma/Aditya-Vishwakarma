@@ -10,7 +10,7 @@ import { MOBILE_MAX, isCompact } from '../../constants';
 import SectionPane, { PaneMeasure, VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
 import TextHaze from './TextHaze';
 import Controls from './Controls';
-import { usePaintTheme } from './theme';
+import { usePaintTheme, useTheme } from './theme';
 import {
   AboutSection,
   ContactSection,
@@ -71,6 +71,8 @@ const TITLE_SHADOW = { wide: '0 0 14px rgba(16, 32, 20, 0.55), 0 1px 3px rgba(16
 
 /** Painted behind the scene until it has drawn: its sky, its horizon, its grass. */
 const MEADOW = 'linear-gradient(180deg, #4FADE8 0%, #73BDEC 30%, #A6D4EE 49%, #A9CDB9 52%, #9CC86A 60%, #8ABE5A 100%)';
+/** The same in the evening (dark mode): the sunset's sky, and the grass by moonlight. */
+const EVENING_MEADOW = 'linear-gradient(180deg, #AEA8CA 0%, #DEB7A8 30%, #E68F6A 49%, #6E755C 52%, #556942 60%, #4A693A 100%)';
 
 /** How much a section has to show, and so how wide its pane is. */
 type PaneSize = 'wide' | 'medium' | 'narrow';
@@ -284,6 +286,8 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const { width, height } = useViewport();
   // On a phone, the scene runs under the status bar and the home bar; what's placed on the margins keeps clear of them.
   usePaintTheme();
+  // Dark mode is evening in the scene: a sunset's sky, the land lit by the moon.
+  const dusk = useTheme() === 'dark';
   const safe = useSafeArea();
   // The pane's and the nav's phone layout, for a screen narrow or short; the name and title's, for a narrow one.
   const compact = isCompact(width, height);
@@ -546,7 +550,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
       {/* The scene, beneath everything. */}
       <div
         className="fixed inset-0 touch-manipulation"
-        style={{ background: MEADOW }}
+        style={{ background: dusk ? EVENING_MEADOW : MEADOW }}
         onPointerDown={onSceneDown}
         onPointerUp={onSceneUp}
         onPointerCancel={() => (touched.current = null)}
@@ -562,7 +566,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             gl={{ antialias: false, depth: false, stencil: false, powerPreference: 'default' }}
             style={{ position: 'absolute', inset: 0 }}
           >
-            <MapleScene season={season} clear={clear} still={!!section} paused={covered} onReady={onReady} handle={handle} />
+            <MapleScene season={season} dusk={dusk} clear={clear} still={!!section} paused={covered} onReady={onReady} handle={handle} />
           </Canvas>
         </div>
       </div>

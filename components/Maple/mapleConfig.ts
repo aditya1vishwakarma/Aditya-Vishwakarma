@@ -180,6 +180,42 @@ export const SCENE_COLOURS = {
   streak: '#FFFEF8',
 };
 
+/* ─── Evening ────────────────────────────────────────────────── */
+
+/**
+ * The scene in dark mode: evening, the sun just gone down behind the far
+ * hills. Only the sky takes a sunset's colours, from a photo taken at dusk:
+ * coral along the hills, up through apricot and peach to lavender overhead.
+ * The land keeps its own colours, lit now by the moon rather than the
+ * afternoon sun: less light, and softer, so each surface takes the shade end
+ * of its own ramp, dimmed and cooled a touch (`moon`). The sunset reaches the
+ * land only where it would: the river mirrors it, the clouds catch it from
+ * beneath, and the distance fades into its haze.
+ */
+export const EVENING = {
+  /** The sky from the horizon up: how high each colour lies, in degrees, and the colour. */
+  sky: [
+    [0, '#E68F6A'],
+    [2, '#F2A671'],
+    [4, '#EBB490'],
+    [6.5, '#DEB7A8'],
+    [11, '#C5B2C0'],
+    [18.5, '#AEA8CA'],
+    [40, '#9894C2'],
+  ] as [number, string][],
+  /** Clouds lit from beneath by the sun gone down, their tops in the lavender of the sky. */
+  cloud: '#F6CBB4',
+  cloudShade: '#A9A0C3',
+  /** The moon's light, laid over the land's own colours: dimmer than the sun's, and a little cooler. */
+  moon: '#8D96AE',
+  /** The river, mirroring the sunset: its depths, its body, and the glow down its middle. */
+  water: ['#8F7B86', '#E8A47D', '#F8C08E'],
+  /** The air over the far plain, warm with the glow at the horizon. */
+  haze: '#AB8F7F',
+  /** Seconds the light takes to turn, either way. */
+  turn: 2.6,
+};
+
 /* ─── Camera ─────────────────────────────────────────────────── */
 
 /**
