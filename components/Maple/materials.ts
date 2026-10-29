@@ -52,11 +52,21 @@ export interface SceneUniforms {
   uGrove: { value: THREE.Vector3[] };
   /** The light: 0 the afternoon sun, 1 evening and the moon (dark mode). Every shader mixes by it. */
   uDusk: { value: number };
-  uMoon: { value: THREE.Vector3 };
+  uMoonlight: { value: THREE.Vector3 };
+  /** Toward the moon, and the sheen it puts on what faces it. */
+  uMoonDir: { value: THREE.Vector3 };
+  uSheen: { value: THREE.Vector3 };
   /** The air the distance fades into, by day and in the evening. */
   uHaze: { value: THREE.Vector3 };
   uDuskHaze: { value: THREE.Vector3 };
 }
+
+/** Which way a point in the sky lies, from where the sky measures it: degrees from the shot's own line, and up from the horizon. */
+const skyward = (az: number, el: number) => {
+  const b = THREE.MathUtils.degToRad(az + BEARING);
+  const e = THREE.MathUtils.degToRad(el);
+  return new THREE.Vector3(Math.sin(b) * Math.cos(e), Math.sin(e), -Math.cos(b) * Math.cos(e));
+};
 
 export const createUniforms = (season: Season, dusk: boolean): SceneUniforms => {
   const p = PALETTES[season];
@@ -73,7 +83,9 @@ export const createUniforms = (season: Season, dusk: boolean): SceneUniforms => 
     uGrassPatch: { value: rgb(p.grassPatch) },
     uGrove: { value: ramp(p.grove) },
     uDusk: { value: dusk ? 1 : 0 },
-    uMoon: { value: rgb(EVENING.moon) },
+    uMoonlight: { value: rgb(EVENING.moonlight) },
+    uMoonDir: { value: skyward(EVENING.moon.az, EVENING.moon.el) },
+    uSheen: { value: rgb(EVENING.moon.sheen) },
     uHaze: { value: rgb(SCENE_COLOURS.haze) },
     uDuskHaze: { value: rgb(EVENING.haze) },
   };
@@ -177,11 +189,12 @@ const RAMP_GLSL = /* glsl */ `
  * each keeps its light and shade. Then the moon's colour over the lot,
  * dimmer and a little cooler. Nothing changes its colour; it's only seen in
  * less light. And the haze the distance fades into: pale blue by day, the
- * sunset's in the evening.
+ * night's deeper blue in the evening.
  */
 const DUSK_GLSL = /* glsl */ `
   uniform float uDusk;
-  uniform vec3 uMoon;
+  uniform vec3 uMoonlight;
+  uniform vec3 uSheen;
   uniform vec3 uHaze;
   uniform vec3 uDuskHaze;
 
@@ -189,7 +202,7 @@ const DUSK_GLSL = /* glsl */ `
     return L - 0.25 * uDusk * smoothstep(0.45, 1.0, L);
   }
   vec3 duskTone(vec3 col) {
-    return col * mix(vec3(1.0), uMoon, uDusk);
+    return col * mix(vec3(1.0), uMoonlight, uDusk);
   }
   vec3 haze() {
     return mix(uHaze, uDuskHaze, uDusk);
@@ -201,24 +214,38 @@ const DUSK_GLSL = /* glsl */ `
  * low where any mass stands in its way. A mass doesn't shade itself (`self`)
  * — the turn of its own surface already does that — and foliage is never
  * wholly opaque.
+ *
+ * In the evening, the moon's light: it's behind the eye, so it falls softly
+ * on whatever faces the eye and the moon, wherever no other mass is in its
+ * way, and the near side of the crown is lit a little more than the rest.
  */
 const LOBES_GLSL = /* glsl */ `
   #define MAX_LOBES ${MAX_LOBES}
   uniform vec3 uSun;
+  uniform vec3 uMoonDir;
   uniform vec4 uLobes[MAX_LOBES];
 
-  float lobeShadow(vec3 p, float self) {
+  // How far the masses stand between p and a light that way: 0 open to it, 1 behind one.
+  float lobeCover(vec3 p, float self, vec3 dir) {
     float cover = 0.0;
     for (int i = 0; i < MAX_LOBES; i++) {
       if (abs(float(i) - self) < 0.5) continue;
       vec4 b = uLobes[i];
       vec3 oc = b.xyz - p;
-      float t = dot(oc, uSun);
+      float t = dot(oc, dir);
       if (t <= 0.0) continue;
-      float miss = length(oc - uSun * t) / b.w;
+      float miss = length(oc - dir * t) / b.w;
       cover = max(cover, 1.0 - smoothstep(0.62, 0.96, miss));
     }
-    return 1.0 - 0.78 * cover;
+    return cover;
+  }
+
+  float lobeShadow(vec3 p, float self) {
+    return 1.0 - 0.78 * lobeCover(p, self, uSun);
+  }
+
+  float moonLight(vec3 n, vec3 p, float self) {
+    return smoothstep(0.0, 0.85, dot(n, uMoonDir)) * (1.0 - lobeCover(p, self, uMoonDir));
   }
 `;
 
@@ -296,12 +323,14 @@ export function makeLeafMaterial(u: SceneUniforms, atlas: THREE.Texture) {
       attribute vec3 aNormal;
       attribute vec4 aLeaf;  // size, roll, a random number, atlas tile
       attribute vec3 aShade; // ambient occlusion, which mass, which clump
+      uniform float uDusk;
       ${SWAY_GLSL}
       ${LOBES_GLSL}
       varying vec2 vUv;
       varying vec3 vLight;
       varying float vRand;
       varying float vClump;
+      varying float vMoon;
 
       void main() {
         vec3 c = aCenter + sway(aCenter);
@@ -318,6 +347,9 @@ export function makeLeafMaterial(u: SceneUniforms, atlas: THREE.Texture) {
         vLight = vec3(dot(aNormal, uSun), lobeShadow(c, aShade.y), aShade.x);
         vRand = aLeaf.z;
         vClump = aShade.z;
+        // In the evening, the moon's light on the near side of the crown; less deep among the leaves.
+        vMoon = 0.0;
+        if (uDusk > 0.0) vMoon = uDusk * aShade.x * moonLight(aNormal, c, aShade.y);
       }
     `,
     fragmentShader: /* glsl */ `
@@ -328,6 +360,7 @@ export function makeLeafMaterial(u: SceneUniforms, atlas: THREE.Texture) {
       varying vec3 vLight;
       varying float vRand;
       varying float vClump;
+      varying float vMoon;
       ${RAMP_GLSL}
       ${DUSK_GLSL}
 
@@ -346,8 +379,10 @@ export function makeLeafMaterial(u: SceneUniforms, atlas: THREE.Texture) {
         float hue = smoothstep(0.5, 0.9, fract(id * 3.7 + vRand * 1.3));
         vec3 col = mix(ramp(L, uLeaf[0], uLeaf[1], uLeaf[2], uLeaf[3]),
                        ramp(L, uLeafAlt[0], uLeafAlt[1], uLeafAlt[2], uLeafAlt[3]), hue);
+        // Where the moon catches them, the same colours in a little more light, touched with its pale cool.
+        col = mix(duskTone(col) * (1.0 + 0.3 * vMoon), uSheen, 0.06 * vMoon);
         // Which clump this is, in alpha, for the ink pass: leaves are even numbers, anything else 255.
-        gl_FragColor = vec4(duskTone(col), (vClump + 1.0) * 2.0 / 255.0);
+        gl_FragColor = vec4(col, (vClump + 1.0) * 2.0 / 255.0);
       }
     `,
   });
@@ -501,7 +536,11 @@ export function makeWoodMaterial(u: SceneUniforms) {
         L *= 0.86 + 0.26 * noise2(vec2(vBark.y * 24.0, vBark.x * 1.7));
         // Darker where the roots go into the grass.
         L *= mix(0.6, 1.0, smoothstep(-0.15, 0.7, vWorld.y));
-        gl_FragColor = vec4(duskTone(ramp(duskLight(L), uBark[0], uBark[1], uBark[2], uBark[3])), 1.0);
+        // In the evening, the moon's light on the near side of the trunk and the limbs.
+        float moon = 0.0;
+        if (uDusk > 0.0) moon = uDusk * moonLight(n, vWorld, -1.0);
+        vec3 col = duskTone(ramp(duskLight(L), uBark[0], uBark[1], uBark[2], uBark[3])) * (1.0 + 0.25 * moon);
+        gl_FragColor = vec4(mix(col, uSheen, 0.06 * moon), 1.0);
       }
     `,
   });
@@ -581,7 +620,7 @@ export function makeGroundMaterial(u: SceneUniforms, shadowCentre: THREE.Vector3
           float bank = (1.0 - smoothstep(0.0, max(0.6, edge * 1.5), abs(r.x - across - 0.35))) * level;
           col = mix(col, col * 0.72, bank * 0.7);
           float water = (1.0 - smoothstep(across - edge, across + edge, r.x)) * level;
-          // In the evening it mirrors the sunset instead of the blue.
+          // At night it mirrors the night's sky instead of the day's.
           vec3 wet = mix(mix(uWater[0], uDuskWater[0], uDusk), mix(uWater[1], uDuskWater[1], uDusk), smoothstep(0.0, 0.7, 1.0 - r.x / across));
           wet = mix(wet, mix(uWater[2], uDuskWater[2], uDusk), (1.0 - smoothstep(0.0, across * 0.3, r.x)) * 0.55);
           col = mix(col, wet, water);
@@ -841,8 +880,8 @@ export function makeRidgeMaterial(u: SceneUniforms, colour: string, mist: number
 
 /**
  * Noon: a clear wash from deep blue overhead to a softer blue at the horizon.
- * In the evening, a sunset's: coral along the hills, up through apricot and
- * peach to lavender overhead. The clouds are cards of their own.
+ * At night, deep blue overhead down to a lighter blue along the hills, and
+ * the stars out. The clouds are cards of their own.
  */
 export function makeSkyMaterial(u: SceneUniforms) {
   return new THREE.ShaderMaterial({
@@ -854,6 +893,7 @@ export function makeSkyMaterial(u: SceneUniforms) {
       uDusk: u.uDusk,
       uDuskSky: { value: EVENING.sky.map(([, c]) => rgb(c)) },
       uDuskAt: { value: EVENING.sky.map(([el]) => el) },
+      uStars: { value: new THREE.Vector3(EVENING.stars.patch, EVENING.stars.share, EVENING.stars.light) },
     },
     side: THREE.BackSide,
     // Drawn after everything solid, at the very back, so it's painted only
@@ -876,8 +916,21 @@ export function makeSkyMaterial(u: SceneUniforms) {
       uniform float uDusk;
       uniform vec3 uDuskSky[DUSK_STOPS];
       uniform float uDuskAt[DUSK_STOPS];
+      uniform vec3 uStars; // patch, share, light
       varying vec3 vDir;
       ${NOISE_GLSL}
+
+      // The star in this patch of sky, if it holds one: set anywhere in the
+      // patch but near its edge, its size and brightness its own. In degrees,
+      // aa being about a pixel's worth.
+      float star(vec2 p, float aa) {
+        vec2 cell = floor(p / uStars.x);
+        if (hash12(cell) > uStars.y) return 0.0;
+        vec2 at = (cell + 0.2 + 0.6 * vec2(hash12(cell + 17.3), hash12(cell + 41.9))) * uStars.x;
+        float big = hash12(cell + 73.1);
+        float r = mix(0.025, 0.07, big * big);
+        return mix(0.35, 1.0, big) * (1.0 - smoothstep(r - aa, r + aa, distance(p, at)));
+      }
 
       void main() {
         vec3 d = normalize(vDir);
@@ -887,10 +940,15 @@ export function makeSkyMaterial(u: SceneUniforms) {
         // Blue soon after the horizon, so the middle of the frame isn't a white haze.
         vec3 col = mix(uHorizon, uMid, smoothstep(0.0, 9.0, el));
         col = mix(col, uZenith, smoothstep(5.0, 38.0, el));
-        // The evening's, each colour easing into the next as the sky rises.
+        // The night's, each colour easing into the next as the sky rises.
         vec3 eve = uDuskSky[0];
         for (int i = 1; i < DUSK_STOPS; i++) eve = mix(eve, uDuskSky[i], smoothstep(uDuskAt[i - 1], uDuskAt[i], el));
         col = mix(col, eve, uDusk);
+        // The stars come out once the night has come on: fainter toward the
+        // hills, where there's more air to see them through.
+        float aa = fwidth(el);
+        float stars = star(vec2(az, el), aa) * uStars.z * smoothstep(0.6, 1.0, uDusk) * smoothstep(1.0, 10.0, el);
+        col = mix(col, vec3(0.92, 0.94, 1.0), stars);
         // A painted wash is never perfectly even.
         col *= 1.0 + (fbm2(vec2(az, el) * 0.05) - 0.5) * 0.05;
 
@@ -972,10 +1030,8 @@ export function makeCloudMaterial(u: SceneUniforms, atlas: THREE.Texture) {
       void main() {
         vec4 tex = texture2D(uAtlas, vUv); // r: how light, g: how much cloud
         float light = smoothstep(0.0, 1.0, 0.14 + 0.55 * vHeight + 0.35 * vUp + (tex.r - 0.84) * 2.6);
-        vec3 col = mix(uCloudShade, uCloud, light);
-        // In the evening the light comes from below, from the sun gone down behind the hills.
-        float glow = smoothstep(0.0, 1.0, 0.8 - 0.6 * vHeight - 0.35 * vUp + (tex.r - 0.84) * 2.6);
-        col = mix(col, mix(uDuskCloudShade, uDuskCloud, glow), uDusk);
+        // By night the moon lights them as the sun does by day, only dimmer and bluer.
+        vec3 col = mix(mix(uCloudShade, uDuskCloudShade, uDusk), mix(uCloud, uDuskCloud, uDusk), light);
         gl_FragColor = vec4(col, tex.g * 0.8);
       }
     `,

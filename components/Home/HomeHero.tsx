@@ -71,8 +71,22 @@ const TITLE_SHADOW = { wide: '0 0 14px rgba(16, 32, 20, 0.55), 0 1px 3px rgba(16
 
 /** Painted behind the scene until it has drawn: its sky, its horizon, its grass. */
 const MEADOW = 'linear-gradient(180deg, #4FADE8 0%, #73BDEC 30%, #A6D4EE 49%, #A9CDB9 52%, #9CC86A 60%, #8ABE5A 100%)';
-/** The same in the evening (dark mode): the sunset's sky, and the grass by moonlight. */
-const EVENING_MEADOW = 'linear-gradient(180deg, #AEA8CA 0%, #DEB7A8 30%, #E68F6A 49%, #6E755C 52%, #556942 60%, #4A693A 100%)';
+/** The same at night (dark mode): the night's sky, and the grass by moonlight. */
+const EVENING_MEADOW = 'linear-gradient(180deg, #1B264C 0%, #2A3F67 30%, #3D5A7B 49%, #425750 52%, #496545 60%, #4A693A 100%)';
+
+/**
+ * In Safari on iOS 26 the strips behind the status bar and the toolbar are Safari's own, painted solid in the plain
+ * colour of the full-width pinned element at that edge; a gradient, like the meadow's, it samples once and keeps,
+ * so it can't follow the light. So the page lays one of its own along each edge, as deep as the safe area there, in
+ * the scene's colour where Safari's strip meets it: its sky at the top, its grass at the foot, by day or evening.
+ * Safari reads a plain colour afresh each time it looks, so its strips turn with the scene and run on into it.
+ * Over the panes and the menu's dim too, which would otherwise be what Safari reads. Where there are no insets,
+ * they're nothing.
+ */
+const EDGES = {
+  day: { top: '#69B9EC', foot: '#93BC5C' },
+  evening: { top: '#1C284E', foot: '#4A6A3B' },
+};
 
 /** How much a section has to show, and so how wide its pane is. */
 type PaneSize = 'wide' | 'medium' | 'narrow';
@@ -286,8 +300,9 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const { width, height } = useViewport();
   // On a phone, the scene runs under the status bar and the home bar; what's placed on the margins keeps clear of them.
   usePaintTheme();
-  // Dark mode is evening in the scene: a sunset's sky, the land lit by the moon.
+  // Dark mode is night in the scene: a night sky with the stars out, the land lit by the moon.
   const dusk = useTheme() === 'dark';
+  const edges = dusk ? EDGES.evening : EDGES.day;
   const safe = useSafeArea();
   // The pane's and the nav's phone layout, for a screen narrow or short; the name and title's, for a narrow one.
   const compact = isCompact(width, height);
@@ -570,6 +585,9 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
           </Canvas>
         </div>
       </div>
+      {/* What Safari paints behind the status bar and the toolbar (EDGES). */}
+      <div aria-hidden="true" className="fixed inset-x-0 top-0 z-[45]" style={{ height: 'env(safe-area-inset-top)', background: edges.top }} />
+      <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-[45]" style={{ height: 'env(safe-area-inset-bottom)', background: edges.foot }} />
 
       {overlay && (
         <>

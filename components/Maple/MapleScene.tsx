@@ -381,7 +381,7 @@ const useSeason = (uniforms: SceneUniforms, season: Season) => {
   });
 };
 
-/** Evening comes on, and goes, as a sunset would: over a few seconds, eased at either end, not a cut. Then it rests. */
+/** Night comes on, and goes, as dusk would: over a few seconds, eased at either end, not a cut. Then it rests. */
 const useDusk = (uniforms: SceneUniforms, dusk: boolean) => {
   const at = useRef(uniforms.uDusk.value);
   useFrame((_, dt) => {
@@ -397,7 +397,7 @@ const useDusk = (uniforms: SceneUniforms, dusk: boolean) => {
 
 const MapleScene: React.FC<{
   season: Season;
-  /** Evening (dark mode): a sunset's sky, and the land lit by the moon. Turns over a few seconds when it changes. */
+  /** Night (dark mode): a night sky with the stars out, and the land lit by the moon. Turns over a few seconds when it changes. */
   dusk?: boolean;
   freeCamera?: boolean;
   /** Field of view, top to bottom, in degrees; the shot is framed round it. */

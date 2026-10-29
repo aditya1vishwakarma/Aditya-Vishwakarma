@@ -37,6 +37,8 @@
 /* The site's glass: its tint, its rim, and the thickening veil over it to read on. */
 :root {
     --glass-tint: rgba(251, 250, 248, 0.60);
+    /* The pills that sit on the sky, the nav's and the controls': by day, the same glass. */
+    --glass-pill-tint: rgba(251, 250, 248, 0.60);
     --glass-edge: inset 0 1px 1px rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14), inset 0 -12px 26px -20px rgba(0,0,0,0.22);
     --glass-veil: rgba(251, 250, 248, 0.85);
     --glass-fade: rgba(251, 250, 248, 0.55);
@@ -53,6 +55,9 @@
     --color-wash: #6B7585;
 
     --glass-tint: rgba(38, 42, 49, 0.62);
+    /* At night the slate would sink into the dark sky. The day's cream frost instead, thinner, so the pills stand
+       off the night sky by as much as they do off the day's: a step of 0.137 in OKLCH lightness either way. */
+    --glass-pill-tint: rgba(251, 250, 248, 0.16);
     --glass-edge: inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 -12px 26px -20px rgba(0,0,0,0.45);
     --glass-veil: rgba(44, 49, 56, 0.84);
     --glass-fade: rgba(44, 49, 56, 0.55);

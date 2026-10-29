@@ -126,9 +126,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     id: '2',
-    title: 'On Curation',
+    title: 'Curation is the best skill anyone can have.',
     date: 'Random Note, 2025',
-    readTime: '1 min read',
+    readTime: '4 min read',
     category: 'Random Thoughts',
     excerpt: 'Curation is the root of ones creative prowess.',
     path: '/blog/curation',

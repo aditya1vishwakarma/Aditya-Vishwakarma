@@ -68,7 +68,9 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **Edge to edge:** the page is drawn under a phone's status bar, notch and home bar (`viewport-fit=cover` in `index.html`), so the scene fills the whole screen.
   - Everything placed on the margins is placed inside the safe area: the nav, the controls, the pane and the type, each on its margin plus the inset on that side.
   - Script reads the insets with `useSafeArea` (`components/Home/safeArea.ts`); CSS uses `env(safe-area-inset-*)`. Both are zero on a screen without them.
-  - **In Safari on iOS 26** the strips under the status bar and behind the toolbar are painted by Safari, not the page. It paints them solid, in the colour of a full-width fixed element at that edge: here, the scene's container. Only ordinary, scrolling content shows through under them. So the moving scene doesn't reach behind the clock or the toolbar in a Safari tab; each strip is the scene's colour at that edge.
+  - **In Safari on iOS 26** the strips under the status bar and behind the toolbar are painted by Safari, not the page. It paints each solid, in the plain colour of the full-width pinned element at that edge; a gradient it samples once and keeps. Only ordinary, scrolling content shows through under them, so the moving scene can't reach behind the clock or the toolbar in a Safari tab.
+    - So the page lays a strip of its own along each edge, as deep as the safe area there, in the scene's colour where Safari's strip meets it: the sky at the top, the grass at the foot (`EDGES` in `HomeHero.tsx`). Safari reads a plain colour afresh, so its strips turn with the light (dark mode is evening) and run on into the scene.
+    - They sit over the panes and the menu's dim (z-index 45), so those never become what Safari reads. Anything that should own the strips, like a lightbox, goes above them.
 
 ## Breakpoints
 
@@ -139,6 +141,9 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 - A frosted pill on the margins, 43px tall: 5px of glass round each link's own pill.
 - The open section's link sits on a white pill, which slides from link to link as the section changes. Pointing at a link shows a fainter pill.
+- **In dark mode** the pills that sit on the sky (the nav's, its menu with a pane open, and the controls') aren't the panes' slate, which sinks into the night sky. They're the day's cream frost, thinner: 16% where the day's is 60% (`--glass-pill-tint` in `index.css`).
+  - That stands them off the night sky by the same step as by day: about 0.137 in OKLCH lightness, a pill of about `#394E89` on the sky's `#1D2A50`, as the day's `#ADE4FB` stands on `#69B8EA`. White type on it keeps over 7:1.
+  - The phone's spine and its list stand on the grass, so they keep the slate. The frost there would bring white type down to about 4:1, and the slate already stands them off the grass, darker than it.
 - **On a phone, at home,** the menu is a spine: a pill set like a book's spine, reading *Menu* (`MenuSpine` in `components/Layout/Navbar.tsx`).
   - 50 × 110 with its glass (a 44 × 104 button in 3px). It stands on the type's 24px margin, its foot 8px above the top of the title's line (about 16px above its capitals), so it follows the title on any phone.
   - **Its side** is the right, until the visitor swaps it from the controls. On the right its word runs down it (turned 90°); on the left, up it (270°), so the letters' tops face the nearer edge.

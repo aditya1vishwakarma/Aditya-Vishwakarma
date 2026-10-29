@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion as motionComponent, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
-import { glassStyle } from '../UI/glass';
+import { glassStyle, pillGlassStyle } from '../UI/glass';
 import { useMenuSide } from '../Home/menuSide';
 import { useSafeArea, type Insets } from '../Home/safeArea';
 
@@ -137,7 +137,7 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
   if (!compact) {
     return (
       <nav ref={root} aria-label="Sections" inert={away} className={`fixed z-50 ${className}`} style={style}>
-        <div className="flex items-center rounded-full" style={{ ...glassStyle, padding: INSET }}>
+        <div className="flex items-center rounded-full" style={{ ...pillGlassStyle, padding: INSET }}>
           <AnimatePresence initial={false}>{showName && <SmallName key="name" onClick={onHome} compact={false} />}</AnimatePresence>
           <ul className="flex items-center gap-1">
             {items.map((item) => (
@@ -164,7 +164,7 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
 
   return (
     <nav ref={root} aria-label="Sections" inert={away} className={`fixed z-50 flex flex-col items-end ${className}`} style={style}>
-      <div className="flex items-center rounded-full p-[3px]" style={glassStyle}>
+      <div className="flex items-center rounded-full p-[3px]" style={pillGlassStyle}>
         <AnimatePresence initial={false}>{showName && <SmallName key="name" onClick={onHome} compact />}</AnimatePresence>
         <button
           type="button"
@@ -187,7 +187,7 @@ const Navbar: React.FC<NavbarProps> = ({ items, active, onSelect, showName, onHo
             exit={{ scale: 0.94, y: -6, visibility: 'hidden' }}
             transition={{ type: 'spring', stiffness: 420, damping: 32 }}
             className="mt-2 flex w-[208px] origin-top-right flex-col rounded-[32px] p-[6px]"
-            style={glassStyle}
+            style={pillGlassStyle}
           >
             {/* Each row fills the glass's width and is 52px tall, so a tap anywhere on it lands; its corners are the glass's less the padding. */}
             {items.map((item) => (

@@ -13,6 +13,8 @@ export { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP };
 /** Tint and rim are the page's variables (index.css), so they follow the light or dark look. */
 export const GLASS_TINT = 'var(--glass-tint)';
 export const GLASS_EDGE = 'var(--glass-edge)';
+/** The pills on the sky: the same tint by day, a thin frost by night so they don't sink into the dark. */
+export const PILL_TINT = 'var(--glass-pill-tint)';
 
 /** Tint, frost, rim and shadow in one, for glass whose outline isn't clipped (a clip-path would cut the shadow away). */
 export const glassStyle: React.CSSProperties = {
@@ -21,3 +23,6 @@ export const glassStyle: React.CSSProperties = {
   WebkitBackdropFilter: GLASS_BACKDROP,
   boxShadow: `${GLASS_EDGE}, ${CARD_SHADOW}`,
 };
+
+/** The same, for the pills that sit on the sky: the nav's, and the controls'. */
+export const pillGlassStyle: React.CSSProperties = { ...glassStyle, background: PILL_TINT };

@@ -3,7 +3,7 @@ import { ArrowLeftRight, Leaf, Moon, Sun, Wind } from 'lucide-react';
 // Music is off for now, its switch below with it.
 // import { Volume2, VolumeX } from 'lucide-react';
 import { navHeight, navPlace } from '../Layout/Navbar';
-import { glassStyle } from '../UI/glass';
+import { pillGlassStyle } from '../UI/glass';
 import { swapMenuSide } from './menuSide';
 // import { toggleMuted, useMuted } from './music';
 import { useSafeArea } from './safeArea';
@@ -114,7 +114,7 @@ const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void;
       aria-label="Controls"
       data-open={touch && shown ? '' : undefined}
       className={`group fixed z-[60] w-[var(--closed)] overflow-hidden font-sans text-[13px] italic text-charcoal/55 dark:text-paper transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${opens.pane}`}
-      style={{ ...glassStyle, top, left, borderRadius: row / 2, '--closed': `${closed}px`, '--open': open } as React.CSSProperties}
+      style={{ ...pillGlassStyle, top, left, borderRadius: row / 2, '--closed': `${closed}px`, '--open': open } as React.CSSProperties}
     >
       <button
         ref={label}

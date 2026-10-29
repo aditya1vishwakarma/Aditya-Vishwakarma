@@ -183,35 +183,50 @@ export const SCENE_COLOURS = {
 /* ─── Evening ────────────────────────────────────────────────── */
 
 /**
- * The scene in dark mode: evening, the sun just gone down behind the far
- * hills. Only the sky takes a sunset's colours, from a photo taken at dusk:
- * coral along the hills, up through apricot and peach to lavender overhead.
- * The land keeps its own colours, lit now by the moon rather than the
- * afternoon sun: less light, and softer, so each surface takes the shade end
- * of its own ramp, dimmed and cooled a touch (`moon`). The sunset reaches the
- * land only where it would: the river mirrors it, the clouds catch it from
- * beneath, and the distance fades into its haze.
+ * The scene in dark mode: early night, the sun long down behind the far
+ * hills and the last of its light gone from the sky. The sky is a deep blue,
+ * darkest overhead and a little lighter along the hills, where there's more
+ * air to see through; and the stars are out. The land keeps its own colours,
+ * lit now by the moon rather than the afternoon sun: no gold in it, dimmed
+ * and cooled a touch (`moonlight`), and a pale sheen on the side of the maple
+ * that faces the moon. The night reaches the land only where it would: the
+ * river mirrors the sky, the clouds are lit by the moon, and the distance
+ * fades into the blue.
  */
 export const EVENING = {
   /** The sky from the horizon up: how high each colour lies, in degrees, and the colour. */
   sky: [
-    [0, '#E68F6A'],
-    [2, '#F2A671'],
-    [4, '#EBB490'],
-    [6.5, '#DEB7A8'],
-    [11, '#C5B2C0'],
-    [18.5, '#AEA8CA'],
-    [40, '#9894C2'],
+    [0, '#3D5A7B'],
+    [3, '#344E73'],
+    [7, '#2A3F67'],
+    [12, '#213159'],
+    [20, '#192348'],
+    [40, '#101533'],
   ] as [number, string][],
-  /** Clouds lit from beneath by the sun gone down, their tops in the lavender of the sky. */
-  cloud: '#F6CBB4',
-  cloudShade: '#A9A0C3',
+  /**
+   * The stars, fixed in the sky: the sky taken in patches `patch` degrees
+   * across, the share of them that hold a star, and how bright the brightest
+   * are. Fewer than on a moonless night; the moon washes out the faint ones.
+   */
+  stars: { patch: 1.5, share: 0.3, light: 0.9 },
+  /** Clouds lit by the moon as they are by the sun, only dimmer and bluer. */
+  cloud: '#425371',
+  cloudShade: '#222F4F',
   /** The moon's light, laid over the land's own colours: dimmer than the sun's, and a little cooler. */
-  moon: '#8D96AE',
-  /** The river, mirroring the sunset: its depths, its body, and the glow down its middle. */
-  water: ['#8F7B86', '#E8A47D', '#F8C08E'],
-  /** The air over the far plain, warm with the glow at the horizon. */
-  haze: '#AB8F7F',
+  moonlight: '#8D96AE',
+  /**
+   * The moon, out of the picture: a full moon rises opposite the sunset, so
+   * it's behind the eye, up and a little to the left, the side the scene is
+   * lit from. Where it is, measured as the sky is, in degrees from the shot's
+   * own line (left of it, less than 0; 180 straight behind) and up from the
+   * horizon; and the pale, cool light it lays on the side of the maple the eye
+   * sees.
+   */
+  moon: { az: -150, el: 24, sheen: '#CFD5EC' },
+  /** The river, mirroring the night: its depths, its body, and the lighter sky along the hills caught down its middle. */
+  water: ['#131F35', '#21334F', '#3F5A79'],
+  /** The air over the far plain: the night's blue, as the sky is along the hills. */
+  haze: '#3A4F68',
   /** Seconds the light takes to turn, either way. */
   turn: 2.6,
 };
