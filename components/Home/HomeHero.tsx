@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import * as ReactRouterDOM from 'react-router-dom';
 import MapleScene, { type MapleHandle } from '../Maple/MapleScene';
 import { seasonOf, type Season } from '../Maple/mapleConfig';
-import Navbar, { MenuSpine, navBottom, navPlace } from '../Layout/Navbar';
+import Navbar, { navBottom, navGap, navPlace } from '../Layout/Navbar';
 import { useSafeArea, type Insets } from './safeArea';
 import { MOBILE_MAX, isCompact } from '../../constants';
 import SectionPane, { PaneMeasure, VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
@@ -79,9 +79,10 @@ const EVENING_MEADOW = 'linear-gradient(180deg, #1B264C 0%, #2A3F67 30%, #3D5A7B
  * colour of the full-width pinned element at that edge; a gradient, like the meadow's, it samples once and keeps,
  * so it can't follow the light. So the page lays one of its own along each edge, as deep as the safe area there, in
  * the scene's colour where Safari's strip meets it: its sky at the top, its grass at the foot, by day or evening.
- * Safari reads a plain colour afresh each time it looks, so its strips turn with the scene and run on into it.
- * Over the panes and the menu's dim too, which would otherwise be what Safari reads. Where there are no insets,
- * they're nothing.
+ * Safari reads a strip's colour as it appears, not as it changes, so each is made afresh when the look turns over.
+ * Over the panes too, which would otherwise be what Safari reads. Where there are no insets they're nothing, but
+ * for a pixel at the top of a touch screen (an iPad's), for Safari to read there (`.hero-edge-top`). The scene's
+ * own plain colour under its gradient, and the page's behind it, are the same sky, for whatever else Safari reads.
  */
 const EDGES = {
   day: { top: '#69B9EC', foot: '#93BC5C' },
@@ -182,8 +183,6 @@ const GUTTER = 48;
 const TITLE_LEAST = 13;
 /** Between the title and the name below it, on a phone. */
 const STACK_GAP = 18;
-/** Between the top of the title's line and the menu's spine above it: about 16px above its capitals. */
-const SPINE_LIFT = 8;
 
 type Delay = React.CSSProperties & { '--delay': string };
 const delay = (s: number): Delay => ({ '--delay': `${s}s` });
@@ -195,18 +194,16 @@ const delay = (s: number): Delay => ({ '--delay': `${s}s` });
  * run into each other, both are set smaller, in proportion, until they fit
  * side by side (the title no smaller than 13px; the name gives way after
  * that). On a phone the title stands above the name instead, flush left.
- * `onTop` hears how high the two reach, from the bottom of the screen.
  */
-const HeroText: React.FC<{
-  shown: boolean;
-  margin: number;
-  safe: Insets;
-  compact: boolean;
-  smallTitle: boolean;
-  stage: Stage;
-  viewport: string;
-  onTop: (top: number) => void;
-}> = ({ shown, margin, safe, compact, smallTitle, stage, viewport, onTop }) => {
+const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact: boolean; smallTitle: boolean; stage: Stage; viewport: string }> = ({
+  shown,
+  margin,
+  safe,
+  compact,
+  smallTitle,
+  stage,
+  viewport,
+}) => {
   const name = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLParagraphElement>(null);
   const [place, setPlace] = useState<{ name: number; title: number; nameFit: number; titleFit: number; small: boolean; key: string } | null>(null);
@@ -243,7 +240,6 @@ const HeroText: React.FC<{
       const small = parseFloat(getComputedStyle(t).fontSize) < 24;
       const key = `${viewport}:${nameBottom.toFixed(2)}:${titleBottom.toFixed(2)}:${nameBox.width.toFixed(1)}:${titleBox.width.toFixed(1)}`;
       setPlace((p) => (p?.key === key ? p : { name: nameBottom, title: titleBottom, nameFit, titleFit, small, key }));
-      onTop(Math.max(nameBottom + nameBox.height, titleBottom + titleBox.height));
     };
     measure();
     // Measured again once the fonts are in: until then the lines are set in whatever stood in for them.
@@ -251,7 +247,7 @@ const HeroText: React.FC<{
       raf = requestAnimationFrame(measure);
     });
     return () => cancelAnimationFrame(raf);
-  }, [margin, safe, compact, viewport, onTop]);
+  }, [margin, safe, compact, viewport]);
 
   const hazeOn = shown && stage !== 'waiting';
   // Under 24px, by its own measure or set smaller to fit, the title is small text.
@@ -303,6 +299,12 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   // Dark mode is night in the scene: a night sky with the stars out, the land lit by the moon.
   const dusk = useTheme() === 'dark';
   const edges = dusk ? EDGES.evening : EDGES.day;
+  // The page's own colour, behind the scene: Safari's to fall back on for its bars, and what shows past its edges.
+  useLayoutEffect(() => {
+    const roots = [document.documentElement, document.body];
+    roots.forEach((el) => (el.style.backgroundColor = edges.top));
+    return () => roots.forEach((el) => (el.style.backgroundColor = ''));
+  }, [edges.top]);
   const safe = useSafeArea();
   // The pane's and the nav's phone layout, for a screen narrow or short; the name and title's, for a narrow one.
   const compact = isCompact(width, height);
@@ -315,8 +317,6 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const handle = given ?? own;
   const gust = useCallback(() => handle.current?.gust(), [handle]);
   const swapSeason = useCallback(() => setSeason((s) => (s === 'autumn' ? 'summer' : 'autumn')), []);
-  // How high the name and the title reach: on a phone, the menu's spine stands just above them.
-  const [textTop, setTextTop] = useState<number | null>(null);
 
 
   const [ready, setReady] = useState(false);
@@ -490,7 +490,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   // screen for a heavy section, less for the others. To read, it fills the screen inside the reading margin. A
   // phone's fills the screen either way.
   const edge = navPlace(margin, compact).right;
-  const below = navBottom(margin, compact, safe) + (compact ? 12 : 16);
+  const below = navBottom(margin, compact, safe) + navGap(compact);
   const near = compact ? edge : READING_MARGIN;
   // Work's rail of its parts gets room of its own. On a desktop its pane is that much wider, so the list keeps its
   // width; a phone's pane fills the screen, so there the list gives the room up.
@@ -565,7 +565,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
       {/* The scene, beneath everything. */}
       <div
         className="fixed inset-0 touch-manipulation"
-        style={{ background: dusk ? EVENING_MEADOW : MEADOW }}
+        style={{ backgroundColor: edges.top, backgroundImage: dusk ? EVENING_MEADOW : MEADOW }}
         onPointerDown={onSceneDown}
         onPointerUp={onSceneUp}
         onPointerCancel={() => (touched.current = null)}
@@ -585,9 +585,9 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
           </Canvas>
         </div>
       </div>
-      {/* What Safari paints behind the status bar and the toolbar (EDGES). */}
-      <div aria-hidden="true" className="fixed inset-x-0 top-0 z-[45]" style={{ height: 'env(safe-area-inset-top)', background: edges.top }} />
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-[45]" style={{ height: 'env(safe-area-inset-bottom)', background: edges.foot }} />
+      {/* What Safari paints behind the status bar and the toolbar (EDGES): made afresh, by their keys, as the look turns. */}
+      <div key={`top:${dusk}`} aria-hidden="true" className="hero-edge-top fixed inset-x-0 top-0 z-[45]" style={{ background: edges.top }} />
+      <div key={`foot:${dusk}`} aria-hidden="true" className="fixed inset-x-0 bottom-0 z-[45]" style={{ height: 'env(safe-area-inset-bottom)', background: edges.foot }} />
 
       {overlay && (
         <>
@@ -599,7 +599,6 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             smallTitle={smallTitle}
             stage={stage}
             viewport={`${width}x${height}`}
-            onTop={setTextTop}
           />
 
           {/* A press anywhere on the scene puts a list away. Reading, the margins are only margins. */}
@@ -632,20 +631,6 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
 
           {controls && route.mode === 'home' && <Controls margin={margin} compact={compact} onGust={gust} onSeason={swapSeason} />}
 
-          {/* On a phone at home, the menu is the spine above the title; the nav comes down from the top once a pane is open. */}
-          {compact && textTop !== null && (
-            <MenuSpine
-              items={NAV_ITEMS}
-              onSelect={choose}
-              onIntent={onIntent}
-              margin={margin}
-              foot={textTop + SPINE_LIFT}
-              height={height}
-              away={!!section}
-              className={stage === 'waiting' ? 'invisible' : 'hero-nav-in'}
-            />
-          )}
-
           <Navbar
             items={NAV_ITEMS}
             active={route.mode === 'select' ? route.section : null}
@@ -655,7 +640,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             onIntent={onIntent}
             margin={margin}
             compact={compact}
-            away={reading || (compact && !section)}
+            away={reading}
             className={stage === 'waiting' ? 'invisible' : 'hero-nav-in'}
           />
         </>

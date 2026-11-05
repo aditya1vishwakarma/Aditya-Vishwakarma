@@ -245,6 +245,18 @@
   opacity: 1;
 }
 
+/* What Safari paints behind the status bar (EDGES in HomeHero.tsx): as deep as the inset there, and on a touch screen
+   with none, an iPad's, a pixel, so Safari still has it to read. */
+.hero-edge-top {
+  height: env(safe-area-inset-top, 0px);
+}
+
+@media (hover: none) {
+  .hero-edge-top {
+    height: max(1px, env(safe-area-inset-top, 0px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero[data-stage] .hero-reveal,
   .hero-nav-in {

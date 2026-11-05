@@ -63,17 +63,17 @@ const LocallyHostedApps = () => {
           align="start"
           items={[
             {
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/DrawingCal.avif',
+              src: 'https://images.adityavishwakarma.com/projectvideos/DrawingCal.avif',
               alt: 'Draw.Home Home Page View',
               caption: 'Home Page',
             },
             {
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Stopwatch.avif',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Stopwatch.avif',
               alt: 'Stop Watch View',
               caption: 'Stop Watch or Timer',
             },
             {
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Art%20Practice%201.avif',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Art%20Practice%201.avif',
               alt: 'Journal Entry View',
               caption: 'Journal Entry',
             },

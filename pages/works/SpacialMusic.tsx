@@ -38,13 +38,13 @@ const SpacialMusic = () => {
           The core framework of the experience is Vision's <InlineCode>VNGenerateForegroundInstanceMaskRequest</InlineCode>. It analyzes the image (album cover), pulls the foreground subject from the background, and renders them on separate planes. This works well on photographic covers. On illustrated or abstract art, the results range from imperfect to wrong. I planned fallbacks for that, including hand-made PNGs and single-plane rendering when extraction failed. I just never got to it because I had an idea for an actual app (Placemarks) that I could make. I didn’t want to put my energy into something I think would be DOA anyways.
         </P>
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/IMG_2420.PNG"
+          src="https://images.adityavishwakarma.com/projectvideos/IMG_2420.PNG"
           alt="Spatial Music Screenshot"
           caption="Demo home page"
           capped={true}
         />
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/IMG_2421.PNG"
+          src="https://images.adityavishwakarma.com/projectvideos/IMG_2421.PNG"
           alt="Spatial Music Screenshot"
           caption="The first run of the music player subject separation - terrible! XD"
           capped={true}

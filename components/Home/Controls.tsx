@@ -1,10 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeftRight, Leaf, Moon, Sun, Wind } from 'lucide-react';
+import { Leaf, Moon, Sun, Wind } from 'lucide-react';
 // Music is off for now, its switch below with it.
 // import { Volume2, VolumeX } from 'lucide-react';
-import { navHeight, navPlace } from '../Layout/Navbar';
+import { navHeight, navMenuWidth, navPlace } from '../Layout/Navbar';
 import { pillGlassStyle } from '../UI/glass';
-import { swapMenuSide } from './menuSide';
 // import { toggleMuted, useMuted } from './music';
 import { useSafeArea } from './safeArea';
 import { toggleTheme, useTheme } from './theme';
@@ -75,8 +74,8 @@ const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void;
   const left = inset + safe.left;
   const row = navHeight(compact);
   const opens = touch ? OPENS.touch : OPENS.keys;
-  // At home on a phone, the menu is down by the title, so the top is clear all the way across.
-  const open = touch ? `min(${OPEN.touch}px, calc(100vw - ${left + inset + safe.right}px))` : `${OPEN.keys}px`;
+  // On a phone, the nav at home is only its menu button: the open list stops short of it.
+  const open = touch ? `min(${OPEN.touch}px, calc(100vw - ${left + navMenuWidth + 10 + inset + safe.right}px))` : `${OPEN.keys}px`;
 
   // Closed, as wide as its word: measured, so the width has something to open from.
   const label = useRef<HTMLButtonElement>(null);
@@ -153,17 +152,6 @@ const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void;
                     {dark ? 'Light Mode' : 'Dark Mode'}
                   </button>
                 </li>
-                {/* The menu's spine is a phone's alone. */}
-                {compact && (
-                  <li>
-                    <button type="button" onClick={swapMenuSide} className={TAP}>
-                      <Mark>
-                        <ArrowLeftRight size={15} strokeWidth={1.75} />
-                      </Mark>
-                      Swap Menu Side
-                    </button>
-                  </li>
-                )}
               </>
             ) : (
               <>
@@ -183,17 +171,6 @@ const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void;
                     {dark ? 'Light Mode' : 'Dark Mode'}
                   </button>
                 </li>
-                {/* A narrow window has the phone's layout, and its spine, too. */}
-                {compact && (
-                  <li>
-                    <button type="button" onClick={swapMenuSide} className={ACT}>
-                      <Mark>
-                        <ArrowLeftRight size={15} strokeWidth={1.75} />
-                      </Mark>
-                      Swap Menu Side
-                    </button>
-                  </li>
-                )}
               </>
             )}
             {/* Music is off for now.

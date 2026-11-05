@@ -20,7 +20,7 @@ const DJXProject = () => {
       </Section>
 
       <Video
-        src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/djxlockprototype.mov"
+        src="https://images.adityavishwakarma.com/projectvideos/djxlockprototype.mov"
         bleed="wide"
         autoPlay
         muted

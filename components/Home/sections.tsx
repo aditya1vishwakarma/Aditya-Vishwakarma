@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useIsPresent } from 'framer-motion';
 import * as ReactRouterDOM from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Instagram, Linkedin, Mail, Twitter } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Github, Instagram, Linkedin, Mail, Twitter } from 'lucide-react';
 import { BLOG_POSTS, MOBILE_MAX, PHOTOS, PROJECTS, SHORT_MAX, SOCIAL_LINKS } from '../../constants';
 import type { Project } from '../../types';
 import Squircle from '../UI/Squircle';
@@ -885,6 +885,7 @@ export const AboutSection: React.FC = () => {
 const CONTACTS = [
   { label: 'Email me', href: SOCIAL_LINKS.email, Icon: Mail },
   { label: 'LinkedIn', href: SOCIAL_LINKS.linkedin, Icon: Linkedin },
+  { label: 'GitHub', href: SOCIAL_LINKS.github, Icon: Github },
   { label: 'Instagram', href: SOCIAL_LINKS.instagram, Icon: Instagram },
   { label: 'Twitter', href: SOCIAL_LINKS.twitter, Icon: Twitter },
 ];

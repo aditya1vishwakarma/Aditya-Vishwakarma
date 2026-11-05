@@ -21,7 +21,7 @@ const AppIconDesign = () => {
 
         {/* TODO: paste CDN link */}
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/iconcompare.avif"
+          src="https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/iconcompare.avif"
           alt="The evolution of the Placemarks app icon"
           bleed="wide"
           priority
@@ -49,11 +49,11 @@ const AppIconDesign = () => {
           bleed="wide"
           orientation="square"
           items={[
-            { src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_9283.avif', alt: 'Inspo 1' },
-            { src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_9255.avif', alt: 'Inspo 2' },
-            { src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/_DSF1299.avif', alt: 'Insp 3' },
-            {src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/_DSF1242.avif', alt: 'Inspo 4'},
-            {src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_6222.avif', alt: 'Inspo 5'}
+            { src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_9283.avif', alt: 'Inspo 1' },
+            { src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_9255.avif', alt: 'Inspo 2' },
+            { src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/_DSF1299.avif', alt: 'Insp 3' },
+            {src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/_DSF1242.avif', alt: 'Inspo 4'},
+            {src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_6222.avif', alt: 'Inspo 5'}
           ]}
           caption="All of the photos above are taken by me. You can see where I eventually get the shape of the hill from in the app icon"
         />
@@ -70,7 +70,7 @@ const AppIconDesign = () => {
 
         {/* TODO: paste CDN link */}
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/initialicon.avif"
+          src="https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/initialicon.avif"
           alt="First icon concept: a green hill line with an abstract of Geisel perched on it."
           caption="First icon concept: a green hill line with an abstract of Geisel perched on it."
         />
@@ -87,7 +87,7 @@ const AppIconDesign = () => {
 
         {/* TODO: paste CDN link */}
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_3159.jpeg"
+          src="https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/IMG_3159.jpeg"
           alt="A few iterations/ideations of what a new icon woudl be like."
           caption="A few iterations/ideations of what a new icon woudl be like."
         />
@@ -109,9 +109,9 @@ const AppIconDesign = () => {
         <MediaGallery
           bleed="wide"
           items={[
-            { src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/Slant%20Building.avif', alt: 'Final Placemarks icon' },
-            {src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/Perchnoperch.avif', alt: 'Sketch of the final icon shape' },
-            { src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/Blog%20Post%20Assets/Icon%20Design%20Assets/finalicon.avif', alt: 'Final Placemarks icon variant' },
+            { src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/Slant%20Building.avif', alt: 'Final Placemarks icon' },
+            {src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/Perchnoperch.avif', alt: 'Sketch of the final icon shape' },
+            { src: 'https://images.adityavishwakarma.com/Blog%20Post%20Assets/Icon%20Design%20Assets/finalicon.avif', alt: 'Final Placemarks icon variant' },
           ]}
           caption="The final Placemarks icon set."
         />

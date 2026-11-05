@@ -13,7 +13,7 @@ const AMDesktopRed = () => {
                     At the time, in March 2025, I was learning design and also importing some live sets onto my iPhone when I noticed how antiquated the Apple Music Desktop App at the time was. This sparked an interest to re-do the desktop app with more modern iOS 18 design principles.
                 </p>
                 <Img
-                    src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/AM%20Home%20Page.jpg"
+                    src="https://images.adityavishwakarma.com/projectvideos/AM%20Home%20Page.jpg"
                     alt="A screenshot of the direction I was heading towards for the redesign."
                     bleed="full"
                     caption="Redesigned home page of my Apple Music Desktop App"

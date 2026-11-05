@@ -68,9 +68,11 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **Edge to edge:** the page is drawn under a phone's status bar, notch and home bar (`viewport-fit=cover` in `index.html`), so the scene fills the whole screen.
   - Everything placed on the margins is placed inside the safe area: the nav, the controls, the pane and the type, each on its margin plus the inset on that side.
   - Script reads the insets with `useSafeArea` (`components/Home/safeArea.ts`); CSS uses `env(safe-area-inset-*)`. Both are zero on a screen without them.
-  - **In Safari on iOS 26** the strips under the status bar and behind the toolbar are painted by Safari, not the page. It paints each solid, in the plain colour of the full-width pinned element at that edge; a gradient it samples once and keeps. Only ordinary, scrolling content shows through under them, so the moving scene can't reach behind the clock or the toolbar in a Safari tab.
-    - So the page lays a strip of its own along each edge, as deep as the safe area there, in the scene's colour where Safari's strip meets it: the sky at the top, the grass at the foot (`EDGES` in `HomeHero.tsx`). Safari reads a plain colour afresh, so its strips turn with the light (dark mode is evening) and run on into the scene.
-    - They sit over the panes and the menu's dim (z-index 45), so those never become what Safari reads. Anything that should own the strips, like a lightbox, goes above them.
+  - **In Safari 26 (iPhone and iPad)** the strips under the status bar and behind the toolbar are painted by Safari, not the page. It paints each solid, in the plain colour of the full-width pinned element at that edge, or else the page's background. It ignores `theme-color`. Only a page that has scrolled shows its own pixels under them, so the fixed scene can't reach behind the clock or the toolbar in a Safari tab, and the strips can't be made clear.
+    - So the page lays a strip of its own along each edge, as deep as the safe area there, in the scene's colour where Safari's strip meets it: the sky at the top, the grass at the foot (`EDGES` in `HomeHero.tsx`). On a touch screen with no inset at the top (an iPad), the top one is a pixel, so Safari still has it to read.
+    - Safari reads a strip's colour as it appears, not when it changes. So the strips are made afresh (new keys) when the look turns over (dark mode is evening), and Safari's strips turn with them.
+    - Behind them, the same sky: the scene's container has it as a plain colour under its gradient, and the page's `html` and `body` take it while the home page is up.
+    - They sit over the panes (z-index 45), so those never become what Safari reads. Anything that should own the strips, like a lightbox, goes above them.
 
 ## Breakpoints
 
@@ -143,14 +145,11 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - The open section's link sits on a white pill, which slides from link to link as the section changes. Pointing at a link shows a fainter pill.
 - **In dark mode** the pills that sit on the sky (the nav's, its menu with a pane open, and the controls') aren't the panes' slate, which sinks into the night sky. They're the day's cream frost, thinner: 16% where the day's is 60% (`--glass-pill-tint` in `index.css`).
   - That stands them off the night sky by the same step as by day: about 0.137 in OKLCH lightness, a pill of about `#394E89` on the sky's `#1D2A50`, as the day's `#ADE4FB` stands on `#69B8EA`. White type on it keeps over 7:1.
-  - The phone's spine and its list stand on the grass, so they keep the slate. The frost there would bring white type down to about 4:1, and the slate already stands them off the grass, darker than it.
-- **On a phone, at home,** the menu is a spine: a pill set like a book's spine, reading *Menu* (`MenuSpine` in `components/Layout/Navbar.tsx`).
-  - 50 × 110 with its glass (a 44 × 104 button in 3px). It stands on the type's 24px margin, its foot 8px above the top of the title's line (about 16px above its capitals), so it follows the title on any phone.
-  - **Its side** is the right, until the visitor swaps it from the controls. On the right its word runs down it (turned 90°); on the left, up it (270°), so the letters' tops face the nearer edge.
-  - **The side is remembered** in this browser (`localStorage`, `menu-side`, in `components/Home/menuSide.ts`). Only `left` is read back as left; anything else, or no storage, is the right.
-  - **A tap** opens the list beside it, 8px from it, reaching to 14px from the far edge, centred on the spine as far as the screen allows. The spine reads *Close* in the same place, and the scene dims behind (14%). A tap anywhere else, or Escape, closes it.
-  - **The list:** five rows, 56px tall, each name in Newsreader at 28px, centred. Its corners are 32px: the rows' 24px plus 8px of padding.
-  - **With a pane open,** the spine moves off its side of the screen, and the nav comes down from the top in its place: the small name, to go home, and a 46px button for the other sections. That menu is a 208px pane of glass, each link a row across its whole width, 52px tall, its name set to the right; its corners are 32px, the rows' 26px plus 6px of padding.
+- **On a phone** the links fold into a menu under a button reading *Menu*, in the top right on every screen; with a pane open, the small name sits beside it, to go home. The button is 72 × 40 in 3px of glass, and reads *Close* while the menu is open, in the same place.
+  - **Opened,** the menu has a section pane's top, 12px below the nav (`navGap`), its right edge, 14px in, and its corners, 30px smoothed 100% (`Squircle`, its shadow outside the cut), so over an open pane it lies on the pane's top right exactly.
+  - **Its width:** on a phone held upright (under 480px wide) it's the pane's, 14px in on both sides. On anything wider (a phone on its side, a narrow window) it keeps to 360px, a menu's width rather than a pane's, so over a pane its left edge and foot both stand clear on the pane and it reads as a layer of its own. It's only as tall as its rows. The scene dims behind (14%). A tap anywhere else, or Escape, closes it.
+  - Each link is a row across the glass's whole width, 56px tall, its name in Newsreader at 28px, centred. A tap anywhere on the glass lands on a row. The rows are smoothed 100% too, at the glass's 30px less its 8px of padding, as far as a 56px row allows (`squirclePath` holds full smoothing to 14px there). The open section's row sits on the white pill, cut to the row.
+  - A spine down by the title, on a side the visitor chose, was tried and taken out: on a phone it didn't work.
 
 ## Work
 
@@ -225,13 +224,12 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **With a pointer that hovers** (a computer), pointing at it or tabbing to it opens it, 208px wide, down to:
   - *G* Gust of Wind
   - *S* Change Seasons
-  - Swap Menu Side, in a window narrow or short enough for the phone's layout and its spine (see *Nav*)
-- **On a touch screen** (`(hover: none)`: a phone or a tablet), a tap opens it, up to 224px wide: kept small, as it opens over the scene. A tap anywhere else closes it. Its words are 14px.
+  - Dark Mode / Light Mode
+- **On a touch screen** (`(hover: none)`: a phone or a tablet), a tap opens it, up to 224px wide and short of the nav's menu button: kept small, as it opens over the scene. A tap anywhere else closes it. Its words are 14px.
   - First, a line to read, not a button, 36px tall with no white under it: *Tap the tree for a breeze*. Its words line up with the rows' below.
   - Then each control, a row of its own, its whole width the button: 44px tall (the least a finger wants), on white at 40%, its corners 17px (the pane's 23px less the 6px round it), 4px between rows.
     - Change Seasons
     - Dark Mode / Light Mode
-    - Swap Menu Side, on a phone only: it moves the menu's spine to the other side (see *Nav*).
 - **The tree:** on a touch screen, a tap on the tree at home sends a gust through it. A tap is lifted within 0.5s and moved less than 12px. The tree counts wherever it's drawn this frame: each leaf mass, 10% bigger than drawn, and the trunk, at least 18px wide (`treeAt` on the scene's handle).
 - **The keys:**
   - G brings on a gust, and S swaps the season.

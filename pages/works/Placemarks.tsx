@@ -30,19 +30,19 @@ const Placemarks = () => {
           items={[
             {
               type: 'image',
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/Home%20Page.jpg',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Home%20Page.jpg',
               alt: 'Screenshot of the Placemarks home grid',
               caption: "Current Home Page Layout.",
             },
             {
               type: 'video',
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/rough%20prototype.mov',
+              src: 'https://images.adityavishwakarma.com/projectvideos/rough%20prototype.mov',
               alt: 'Demo walkthrough of adding a photo',
               caption: 'Adding a photo, reviewing tags. Vision ONLY in this demo, as the CreateML model was broken at the time',
             },
             {
               type: 'video',
-              src: 'https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/detaildemo.mp4',
+              src: 'https://images.adityavishwakarma.com/projectvideos/detaildemo.mp4',
               alt: 'Detail view of a saved building entry',
               caption: 'Detail View Page... polish still needed!',
             },
@@ -109,14 +109,14 @@ const Placemarks = () => {
           Rather than talk about this in detail, I'll just post the workflow diagram of the data model, as it is, below:
         </P>
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/data%20flow.jpg"
+          src="https://images.adityavishwakarma.com/projectvideos/data%20flow.jpg"
           alt="Workflow diagram showing how data flows through the user workflow"
           bleed="full"
           caption="How a photo flows through the app and gets tagged."
         />
         <Divider />
         <Img
-          src="https://pub-9c95b4d2e81345c4a46a362747b32ea6.r2.dev/projectvideos/tag%20flow.jpg"
+          src="https://images.adityavishwakarma.com/projectvideos/tag%20flow.jpg"
           alt="High level data model"
           bleed="full"
           caption="High-level diagram of how data is grouped and stored."
