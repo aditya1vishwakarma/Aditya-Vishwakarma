@@ -13,7 +13,7 @@ const Placemarks = () => {
     >
       <Section>
         <Lead>
-          Placemarks (working title) is an app for organizing the buildings and spaces that inspire you.
+          Placemarks (formerly Architextures) is an app for organizing the buildings and spaces that inspire you.
         </Lead>
       </Section>
 

@@ -138,44 +138,32 @@
 }
 
 /*
- * Coming in: each line written on from the left, a soft edge sweeping across
- * it as it sharpens out of a blur. A mask rather than a letter at a time, so
- * the name keeps its kerning.
+ * Coming in: each line fades up in its turn. Only opacity, which the browser
+ * can carry on with while the scene is being built, so it never stalls part-way.
+ * A sweep across the line was tried and taken out: with a mask moved by the page
+ * it stops dead through a stall, and with one moved apart from the page, Firefox
+ * and WebKit let the letters drift or vanish.
  */
 .hero[data-stage='waiting'] .hero-reveal {
   opacity: 0;
 }
 
 .hero[data-stage='in'] .hero-reveal {
-  mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
-  -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
-  mask-size: 300% 100%;
-  -webkit-mask-size: 300% 100%;
-  mask-repeat: no-repeat;
-  -webkit-mask-repeat: no-repeat;
-  animation: hero-write 1.7s cubic-bezier(0.22, 0.61, 0.36, 1) var(--delay, 0s) both;
+  will-change: opacity;
+  animation: hero-fade 1.1s cubic-bezier(0.22, 0.61, 0.36, 1) var(--delay, 0s) both;
 }
 
-@keyframes hero-write {
+@keyframes hero-fade {
   from {
     opacity: 0;
-    filter: blur(8px);
-    mask-position: 100% 0;
-    -webkit-mask-position: 100% 0;
-  }
-  40% {
-    opacity: 1;
   }
   to {
     opacity: 1;
-    filter: blur(0);
-    mask-position: 0 0;
-    -webkit-mask-position: 0 0;
   }
 }
 
 .hero-nav-in {
-  animation: hero-arrive 1.1s cubic-bezier(0.16, 1, 0.3, 1) 1.05s both;
+  animation: hero-arrive 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Scale and lift only: the nav is frosted glass, which mustn't sit under a fade. */
@@ -210,6 +198,11 @@
 
 .pane-scroll[data-rail]::-webkit-scrollbar {
   display: none;
+}
+
+/* What's sized to fill the glass has nothing to scroll, even when rounding leaves it a pixel over. */
+.pane-scroll:has([data-pane-fills]) {
+  overflow-y: hidden;
 }
 
 /* Safari, which knows only these. (Chrome and Firefox take the two above, and ignore these.) */
@@ -262,9 +255,7 @@
   .hero-nav-in {
     animation: none;
     opacity: 1;
-    filter: none;
-    mask-image: none;
-    -webkit-mask-image: none;
+    will-change: auto;
   }
 
   .hero-name,

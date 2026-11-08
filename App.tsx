@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import HomeHero from './components/Home/HomeHero';
-import MoodBoardMuseumPage from './pages/MoodBoardMuseumPage';
+import { loadMuseum } from './components/Home/routes';
+import LoadGuard from './components/UI/LoadGuard';
 
 const { HashRouter, Routes, Route, Navigate } = ReactRouterDOM as any;
+
+const MoodBoardMuseumPage = lazy(loadMuseum);
 
 /** The mood board's home. Its old addresses redirect here. */
 const MIND_MUSEUM = '/mindmuseum';
@@ -18,7 +21,7 @@ const App: React.FC = () => (
   <HashRouter>
     <div className="min-h-screen bg-background text-charcoal font-sans selection:bg-moss selection:text-white overflow-x-hidden">
       <Routes>
-        <Route path={MIND_MUSEUM} element={<MoodBoardMuseumPage />} />
+        <Route path={MIND_MUSEUM} element={<LoadGuard><Suspense fallback={null}><MoodBoardMuseumPage /></Suspense></LoadGuard>} />
         {/* Old addresses for the mood board, kept so existing links still land. */}
         <Route path="/moodboard" element={<Navigate to={MIND_MUSEUM} replace />} />
         <Route path="/moodboard-museum" element={<Navigate to={MIND_MUSEUM} replace />} />

@@ -44,7 +44,7 @@ export const PROJECTS: Project[] = [
   {
     id: '1',
     title: 'Keep This Vibe, DJ X',
-    category: 'Exploration',
+    category: 'Product Case Study',
     description: 'Idea to Prototype to PRD for a feature that helps DJ X keep the vibe going for long listening sessions.',
     fullDescription: 'The DJX Project focuses on analyzing 8.7 million songs to validate a simple feature for Spotify\'s AI DJ. How I used the full PM cycle to take a personal frustration, stress-test it with data, and prototype a solution.',
     imageUrl: 'https://images.adityavishwakarma.com/projecthumbnails/djx.jpg',
@@ -193,7 +193,7 @@ export const PHOTOS: { preview: string; full: string }[] = [
   { preview: "https://images.adityavishwakarma.com/previewimges/lovespring.avif", full: "https://images.adityavishwakarma.com/fullimages/lovespring.avif" },
   { preview: "https://images.adityavishwakarma.com/previewimges/appleparkvisitor.avif", full: "https://images.adityavishwakarma.com/fullimages/appleparkvisitor.avif" },
   { preview: "https://images.adityavishwakarma.com/previewimges/chicagowaves.avif", full: "https://images.adityavishwakarma.com/fullimages/chicagowaves.avif" },
-  { preview: "hhttps://images.adityavishwakarma.com/previewimges/vancouverleaves.avif", full: "https://images.adityavishwakarma.com/fullimages/vancouverleaves.avif" },
+  { preview: "https://images.adityavishwakarma.com/previewimges/vancouverleaves.avif", full: "https://images.adityavishwakarma.com/fullimages/vancouverleaves.avif" },
   { preview: "https://images.adityavishwakarma.com/previewimges/hakonejapanesemaple.avif", full: "https://images.adityavishwakarma.com/fullimages/hakonejapanesemaple.avif" },
   { preview: "https://images.adityavishwakarma.com/previewimges/porscheracing.avif", full: "https://images.adityavishwakarma.com/fullimages/porscheracing.avif" },
   { preview: "https://images.adityavishwakarma.com/previewimges/atlasbar.avif", full: "https://images.adityavishwakarma.com/fullimages/atlasbar.avif" },

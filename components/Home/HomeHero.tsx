@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import * as ReactRouterDOM from 'react-router-dom';
-import MapleScene, { type MapleHandle } from '../Maple/MapleScene';
+import type { MapleHandle } from '../Maple/MapleScene';
 import { seasonOf, type Season } from '../Maple/mapleConfig';
+import LoadGuard from '../UI/LoadGuard';
 import Navbar, { navBottom, navGap, navPlace } from '../Layout/Navbar';
 import { useSafeArea, type Insets } from './safeArea';
 import { MOBILE_MAX, isCompact } from '../../constants';
@@ -20,13 +20,18 @@ import {
   WRITING_CAPTION,
   WorkSection,
   WritingSection,
+  prefetchAbout,
   prefetchPhotos,
   prefetchWork,
 } from './sections';
-import { SECTION_PATHS, routeFor, type SectionId } from './routes';
+import { SECTION_PATHS, prefetchPieces, routeFor, type SectionId } from './routes';
 import './home.css';
 
 const { useLocation, useNavigate } = ReactRouterDOM as any;
+
+// Fetched from the first, alongside the type, and drawn when it's here. A failure is the guard's, round where it's drawn.
+const scene = import('../Maple/SceneCanvas');
+const SceneCanvas = lazy(() => scene);
 
 /**
  * The site, all on one page: the maple scene filling the screen, beneath
@@ -44,8 +49,10 @@ const { useLocation, useNavigate } = ReactRouterDOM as any;
  *   nearly solid, the nav goes up out of the way, and the scene, covered,
  *   stops drawing until it's back in view.
  *
- * The type comes in at once, without waiting on the scene; the scene fades
- * up over a painted meadow as soon as it has drawn.
+ * The order on arrival: the meadow, painted by index.html before anything has
+ * loaded (keep its colours with MEADOW's below); the name, then the title; the
+ * scene, fading up over the meadow as soon as it has drawn; then the nav and
+ * the controls; and, once the page is idle, what the sections will want.
  */
 
 /** The page's one margin, on every edge: a desktop or tablet, and a phone. */
@@ -171,6 +178,13 @@ const useViewport = () => {
 /** Waiting on the fonts; coming in; and in. */
 type Stage = 'waiting' | 'in' | 'done';
 
+/** From the type starting to come in until the title's last line is up (home.css), and a moment. */
+const REVEAL_MS = 1800;
+/** The scene's been up this long before the nav and the controls follow it: most of its fade (home.css). */
+const SCENE_UP_MS = 1000;
+/** The nav and the controls wait no longer than this after the type starts, for a scene that's slow or never comes. */
+const NAV_LATEST_MS = 4000;
+
 /** From a block's last baseline down to the bottom of its box, read off a point set on that baseline. */
 const belowBaseline = (block: HTMLElement) => {
   const probe = block.querySelector('.hero-baseline');
@@ -257,10 +271,10 @@ const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact
       <TextHaze target={name} layout={place?.key ?? ''} on={hazeOn} tint={HAZE.tint} />
       <TextHaze target={title} layout={place?.key ?? ''} on={hazeOn} tint={small ? HAZE.phoneTitle : HAZE.tint} />
       <h1 ref={name} className="hero-name" data-hero-text="name" data-shown={shown} style={{ bottom: place?.name ?? margin, '--fit': place?.nameFit ?? 1 } as React.CSSProperties}>
-        <span data-line="" className="hero-reveal" style={{ letterSpacing: '-0.035em', ...delay(0.1) }}>
+        <span data-line="" className="hero-reveal" style={{ letterSpacing: '-0.035em', ...delay(0) }}>
           Aditya
         </span>{' '}
-        <span data-line="" className="hero-reveal" style={{ letterSpacing: '-0.02em', ...delay(0.32) }}>
+        <span data-line="" className="hero-reveal" style={{ letterSpacing: '-0.02em', ...delay(0.15) }}>
           Vishwakarma
           <span className="hero-baseline" />
         </span>
@@ -268,10 +282,10 @@ const HeroText: React.FC<{ shown: boolean; margin: number; safe: Insets; compact
       <p ref={title} className="hero-title" data-hero-text="title" data-shown={shown}
         style={{ bottom: place?.title ?? margin, '--fit': place?.titleFit ?? 1, '--hero-title-shadow': small ? TITLE_SHADOW.compact : TITLE_SHADOW.wide } as React.CSSProperties}
       >
-        <span data-line="" className="hero-reveal" style={delay(0.8)}>
+        <span data-line="" className="hero-reveal" style={delay(0.45)}>
           Product Manager
         </span>{' '}
-        <span data-line="" className="hero-reveal" style={delay(0.95)}>
+        <span data-line="" className="hero-reveal" style={delay(0.55)}>
           Based in San Francisco
           <span className="hero-baseline" />
         </span>
@@ -340,9 +354,29 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   }, []);
   useEffect(() => {
     if (stage !== 'in') return;
-    const timer = window.setTimeout(() => setStage('done'), 2800);
+    const timer = window.setTimeout(() => setStage('done'), REVEAL_MS);
     return () => window.clearTimeout(timer);
   }, [stage]);
+
+  // The meadow in index.html has done its job: this page paints its own from here.
+  useLayoutEffect(() => {
+    delete document.documentElement.dataset.boot;
+  }, []);
+
+  // A scene that's taking too long, or that won't ever come: what was waiting on it goes on without it.
+  const typeIn = stage !== 'waiting';
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    if (!typeIn) return;
+    const timer = window.setTimeout(() => setGaveUp(true), NAV_LATEST_MS);
+    return () => window.clearTimeout(timer);
+  }, [typeIn]);
+  const [sceneUp, setSceneUp] = useState(false);
+  useEffect(() => {
+    if (!ready) return;
+    const timer = window.setTimeout(() => setSceneUp(true), SCENE_UP_MS);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
 
   // What the pane shows, from the address. One the site doesn't have goes home.
   const location = useLocation();
@@ -367,6 +401,15 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   // Filling the screen inside the reading margin, the nav away: a piece, the expanded view, or a photo from it.
   const reading = route.mode === 'view' || (route.mode === 'photo' && out) || expanded;
   const layoutOf = section ? (reading ? 'view' : `select:${section.id}`) : 'home';
+
+  // The nav and the controls come on after the title and the tree, or at once with a pane open, which needs them.
+  const [chromeIn, setChromeIn] = useState(false);
+  useEffect(() => {
+    if (section || gaveUp || (stage === 'done' && sceneUp)) setChromeIn(true);
+  }, [section, gaveUp, stage, sceneUp]);
+  // The controls leave whenever a pane opens. Their entrance is for arriving on the page, not for each pane closed.
+  const paneSeen = useRef(false);
+  paneSeen.current ||= !!section;
 
   // Where each step of this visit led, by its place in the history — so Back from a piece goes back through the
   // history if its list is where the reader came from, and to the list otherwise.
@@ -430,21 +473,31 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
     else navigate(list, { replace: true });
   }, [section, expanded, navigate]);
 
-  // The gallery's previews, about 2 MB, load once the scene has drawn and the page is idle — on a
-  // wide screen, on a connection that's neither slow nor saving data — so Photos opens full.
-  // Anywhere else they load as Photos is pointed at or opened.
+  // Once the scene has drawn and the page is idle, what the sections will want, so they open full. On a connection
+  // that's neither slow nor saving data: the code of the pieces and the museum; and on a wide screen, the gallery's
+  // previews, about 2 MB, which anywhere else load as Photos is pointed at or opened. Last, and on anything but a
+  // connection saving data, About's two pictures, which are little.
+  const settledIn = ready || gaveUp;
   useEffect(() => {
-    if (!ready || compact) return;
+    if (!settledIn) return;
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-    if (connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType ?? '')) return;
+    const saving = !!connection?.saveData;
+    const slow = ['slow-2g', '2g', '3g'].includes(connection?.effectiveType ?? '');
+    const fetchAhead = () => {
+      if (!saving && !slow) {
+        prefetchPieces();
+        if (!compact) prefetchPhotos();
+      }
+      if (!saving) prefetchAbout();
+    };
     // Safari has no idle callback: a few seconds' wait stands in for one.
     if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(prefetchPhotos, { timeout: 6000 });
+      const id = window.requestIdleCallback(fetchAhead, { timeout: 6000 });
       return () => window.cancelIdleCallback(id);
     }
-    const timer = setTimeout(prefetchPhotos, 2500);
+    const timer = setTimeout(fetchAhead, 2500);
     return () => clearTimeout(timer);
-  }, [ready, compact]);
+  }, [settledIn, compact]);
   // Work's pictures, about 470 KB, load only as Work is pointed at or opened.
   const onIntent = useCallback((id: string) => {
     if (id === 'photos') prefetchPhotos();
@@ -521,9 +574,17 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const card: PaneCard | null = !section
     ? null
     : route.mode === 'view'
-      ? { key: `view:${route.path}`, look: 'view', back: true, node: <route.Page /> }
+      ? { key: `view:${route.path}`, look: 'view', back: true, node: <LoadGuard><Suspense fallback={null}><route.Page /></Suspense></LoadGuard> }
       : route.mode === 'photo'
-        ? { key: `view:${route.path}`, look: inPlace ? 'select' : 'view', back: true, fade: true, node: <PhotoPiece index={route.index} /> }
+        ? {
+            // Opened out, it's a new card at the new size: the glass moves with nothing on it, as for the list.
+            key: `view:${route.path}${out ? ':out' : ''}`,
+            look: inPlace ? 'select' : 'view',
+            back: true,
+            fade: true,
+            expandable: !compact && section.expandable,
+            node: <PhotoPiece index={route.index} />,
+          }
         : {
             key: `select:${section.id}${expanded ? ':out' : ''}`,
             look: expanded ? 'view' : 'select',
@@ -571,18 +632,11 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
         onPointerCancel={() => (touched.current = null)}
       >
         <div className="hero-scene" data-ready={ready}>
-          <Canvas
-            flat
-            // The scene draws its own frames, at its own pace: fewer in calm air, none while it's covered.
-            frameloop="never"
-            // 1.5× is crisp on a Retina screen at half the pixels of 2×, as on the mood board.
-            dpr={[1, 1.5]}
-            // The scene is drawn offscreen and smoothed on its way here; the canvas only shows the result.
-            gl={{ antialias: false, depth: false, stencil: false, powerPreference: 'default' }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            <MapleScene season={season} dusk={dusk} clear={clear} still={!!section} paused={covered} onReady={onReady} handle={handle} />
-          </Canvas>
+          <LoadGuard>
+            <Suspense fallback={null}>
+              <SceneCanvas season={season} dusk={dusk} clear={clear} still={!!section} paused={covered} onReady={onReady} handle={handle} />
+            </Suspense>
+          </LoadGuard>
         </div>
       </div>
       {/* What Safari paints behind the status bar and the toolbar (EDGES): made afresh, by their keys, as the look turns. */}
@@ -621,15 +675,16 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
           </AnimatePresence>
 
           {/* The lists only as tall as what's on them, laid out unseen to find how tall that is. A phone's pane fills the
-              screen whatever's on it. */}
+              screen whatever's on it. Not on arrival, when it would only hold up the rest; with a pane open, at once. */}
           {!compact &&
+            (settledIn || section) &&
             SECTIONS.filter((s) => s.fits).map((s) => (
               <PaneMeasure key={s.id} width={paneWidthOf(s)} caption={s.caption} onHeight={onFitted[s.id]!}>
                 <s.Content />
               </PaneMeasure>
             ))}
 
-          {controls && route.mode === 'home' && <Controls margin={margin} compact={compact} onGust={gust} onSeason={swapSeason} />}
+          {controls && route.mode === 'home' && <Controls margin={margin} compact={compact} onGust={gust} onSeason={swapSeason} className={!chromeIn ? 'invisible' : paneSeen.current ? '' : 'hero-nav-in'} />}
 
           <Navbar
             items={NAV_ITEMS}
@@ -641,7 +696,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
             margin={margin}
             compact={compact}
             away={reading}
-            className={stage === 'waiting' ? 'invisible' : 'hero-nav-in'}
+            className={chromeIn ? 'hero-nav-in' : 'invisible'}
           />
         </>
       )}

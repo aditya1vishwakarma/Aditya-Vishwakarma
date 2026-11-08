@@ -881,7 +881,8 @@ export function makeRidgeMaterial(u: SceneUniforms, colour: string, mist: number
 /**
  * Noon: a clear wash from deep blue overhead to a softer blue at the horizon.
  * At night, deep blue overhead down to a lighter blue along the hills, and
- * the stars out. The clouds are cards of their own.
+ * the stars out, and now and then one falling (shootingStars.ts). The clouds
+ * are cards of their own.
  */
 export function makeSkyMaterial(u: SceneUniforms) {
   return new THREE.ShaderMaterial({
@@ -894,6 +895,10 @@ export function makeSkyMaterial(u: SceneUniforms) {
       uDuskSky: { value: EVENING.sky.map(([, c]) => rgb(c)) },
       uDuskAt: { value: EVENING.sky.map(([el]) => el) },
       uStars: { value: new THREE.Vector3(EVENING.stars.patch, EVENING.stars.share, EVENING.stars.light) },
+      uFrom: { value: new THREE.Vector3() },
+      uAlong: { value: new THREE.Vector3() },
+      uSide: { value: new THREE.Vector3() },
+      uFall: { value: new THREE.Vector4() },
     },
     side: THREE.BackSide,
     // Drawn after everything solid, at the very back, so it's painted only
@@ -917,6 +922,10 @@ export function makeSkyMaterial(u: SceneUniforms) {
       uniform vec3 uDuskSky[DUSK_STOPS];
       uniform float uDuskAt[DUSK_STOPS];
       uniform vec3 uStars; // patch, share, light
+      uniform vec3 uFrom;  // where a falling star's line starts, the way it runs, and square off it
+      uniform vec3 uAlong;
+      uniform vec3 uSide;
+      uniform vec4 uFall;  // how far along its head is, in degrees; how long its tail; how bright the tail, and the head
       varying vec3 vDir;
       ${NOISE_GLSL}
 
@@ -951,6 +960,19 @@ export function makeSkyMaterial(u: SceneUniforms) {
         col = mix(col, vec3(0.92, 0.94, 1.0), stars);
         // A painted wash is never perfectly even.
         col *= 1.0 + (fbm2(vec2(az, el) * 0.05) - 0.5) * 0.05;
+        // A star falling: straight, its tail thinning and dimming away behind a
+        // small bright head. In degrees, aa being about a pixel's worth.
+        if (uFall.z > 0.0) {
+          float s = degrees(atan(dot(d, uAlong), dot(d, uFrom)));
+          float off = degrees(asin(clamp(dot(d, uSide), -1.0, 1.0)));
+          float k = (uFall.x - s) / uFall.y;
+          float taper = clamp(1.0 - k, 0.0, 1.0);
+          float wide = aa * (0.35 + 0.75 * taper);
+          float line = (1.0 - smoothstep(wide, wide + aa, abs(off))) * smoothstep(0.0, aa, s) * smoothstep(0.0, aa, uFall.x - s);
+          float r = length(vec2(s - uFall.x, off)) / (aa * 2.0);
+          float light = max(line * taper * taper * uFall.z, exp(-r * r) * uFall.w);
+          col = mix(col, vec3(0.94, 0.97, 1.0), clamp(light, 0.0, 1.0) * smoothstep(0.6, 1.0, uDusk));
+        }
 
         gl_FragColor = vec4(col, 1.0);
       }
@@ -1032,7 +1054,8 @@ export function makeCloudMaterial(u: SceneUniforms, atlas: THREE.Texture) {
         float light = smoothstep(0.0, 1.0, 0.14 + 0.55 * vHeight + 0.35 * vUp + (tex.r - 0.84) * 2.6);
         // By night the moon lights them as the sun does by day, only dimmer and bluer.
         vec3 col = mix(mix(uCloudShade, uDuskCloudShade, uDusk), mix(uCloud, uDuskCloud, uDusk), light);
-        gl_FragColor = vec4(col, tex.g * 0.8);
+        // A clear sky by night: they're gone by the time the stars come out.
+        gl_FragColor = vec4(col, tex.g * 0.8 * (1.0 - smoothstep(0.0, 0.6, uDusk)));
       }
     `,
   });

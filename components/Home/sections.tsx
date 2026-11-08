@@ -172,6 +172,9 @@ const inTurn = (go: () => void) => {
   };
 };
 
+/** Pictures fetched and decoded ahead, kept here so the browser holds on to them until they're shown. */
+const heldImages = new Map<string, HTMLImageElement>();
+
 /**
  * A picture in a pane, filling its frame. It's drawn once the pane and its
  * card have come to rest — so fetching and decoding it never holds up the
@@ -184,8 +187,10 @@ const inTurn = (go: () => void) => {
  * already in hand when it's drawn is shown as soon as it's decoded, load
  * event or no.
  */
-const PaneImage: React.FC<{ src: string; grow: string; alt?: string; onError?: React.ReactEventHandler<HTMLImageElement> }> = ({ src, grow, alt = '', onError }) => {
+const PaneImage: React.FC<{ src: string; grow: string; alt?: string; ahead?: boolean; onError?: React.ReactEventHandler<HTMLImageElement> }> = ({ src, grow, alt = '', ahead, onError }) => {
   const settled = usePaneSettled();
+  // Already fetched and decoded (`preloadHeld`): it comes in with its card, with no wait and no fade of its own.
+  const [held] = useState(() => !!ahead && heldImages.has(src));
   const [turn, setTurn] = useState(false);
   const [shown, setShown] = useState(false);
   useEffect(() => (settled ? inTurn(() => setTurn(true)) : undefined), [settled]);
@@ -202,6 +207,7 @@ const PaneImage: React.FC<{ src: string; grow: string; alt?: string; onError?: R
     },
     [ready],
   );
+  if (held) return <img src={src} alt={alt} decoding="sync" className={`h-full w-full object-cover ${grow}`} />;
   if (!settled || !turn) return null;
   return (
     <img
@@ -224,6 +230,13 @@ const preload = (src: string) => {
   img.src = src;
   // Decoded too, off the page's own work, so drawing it in the pane later costs next to nothing.
   img.decode?.().catch(() => {});
+  return img;
+};
+
+/** As `preload`, and noted once it's decoded, for a `PaneImage` marked `ahead` to come in with its card. */
+const preloadHeld = (src: string) => {
+  const img = preload(src);
+  img.decode?.().then(() => heldImages.set(src, img), () => {});
 };
 
 /** Whether there's room for a desktop's lists, the pane beside the tree rather than over it: `roomy:` in index.css, for what's sized in script. */
@@ -284,9 +297,6 @@ export const prefetchWork = () => {
   for (const p of PROJECTS) if (p.isSelected && p.imageUrl) preload(p.imageUrl);
 };
 
-/** What a project is, and when. */
-const details = (p: Project) => `${p.category} · ${p.date}`;
-
 /**
  * Selected works to a view: three on a list's glass, four opened out. Past
  * that, they're swiped across, the next one just showing at the edge, so
@@ -301,10 +311,10 @@ const COLUMNS = {
 
 /**
  * A selected work, on a tile of its own: its picture over its name, what it
- * is and when, and a line about it, with an arrow in the corner when it's
- * pointed at. On a phone, a row: a small picture beside its name, what it is
- * and when. Each nests its picture's corners in its own: its radius is the
- * picture's and the room between.
+ * is, and a line about it, with an arrow in the corner when it's pointed at.
+ * On a phone, a row: a small picture beside its name and what it is. Each
+ * nests its picture's corners in its own: its radius is the picture's and the
+ * room between.
  */
 const SelectedWork: React.FC<{ p: Project; look: 'select' | 'view' }> = ({ p, look }) => {
   const roomy = useRoomy();
@@ -337,7 +347,7 @@ const SelectedWork: React.FC<{ p: Project; look: 'select' | 'view' }> = ({ p, lo
       )}
       <div className="relative min-w-0 roomy:px-1.5 roomy:pb-7 roomy:pt-4">
         <h3 className="font-serif text-[19px] leading-[1.15] tracking-[-0.015em] text-charcoal roomy:text-[clamp(22px,1.9vw,26px)] roomy:leading-[1.1]">{p.title}</h3>
-        <p className={`mt-1.5 ${META}`}>{details(p)}</p>
+        <p className={`mt-1.5 ${META}`}>{p.category}</p>
         <p className={`mt-2.5 hidden roomy:block ${BODY}`}>{p.description}</p>
       </div>
       <CardArrow className="absolute bottom-3.5 right-3.5 hidden roomy:block" />
@@ -490,7 +500,7 @@ let photosAsked = false;
 export const prefetchPhotos = () => {
   if (photosAsked) return;
   photosAsked = true;
-  for (const photo of PHOTOS) preload(photo.preview);
+  for (const photo of PHOTOS) preloadHeld(photo.preview);
 };
 
 /**
@@ -575,6 +585,7 @@ export const PhotosSection: React.FC = () => {
   return (
     <ul
       ref={root}
+      data-pane-fills={fills && room !== null ? '' : undefined}
       className="grid"
       style={{
         gap: GAP,
@@ -584,16 +595,24 @@ export const PhotosSection: React.FC = () => {
       }}
     >
         {PHOTOS.map((photo, i) => (
-          <li key={photo.preview} className="relative min-h-0 hover:z-10 focus-within:z-10">
+          // Held above its neighbours until it's finished settling back, rather than dropping behind them on the way.
+          <li key={photo.preview} className="relative z-0 min-h-0 transition-[z-index] delay-[240ms] duration-0 hover:z-10 hover:delay-0 focus-within:z-10 focus-within:delay-0">
             {/* Pointed at, a photo lifts out of the grid — grown from its outer edges inward at the grid's sides, so it
-                never reaches past the glass and brings up a scrollbar. */}
+                never reaches past the glass and brings up a scrollbar. It starts slowly, so it eases up rather than
+                popping, and its shadow fades in beneath rather than being painted afresh each frame. */}
             <a
               href={page(photoPath(i))}
               aria-label={`Open photo ${i + 1} of ${PHOTOS.length}`}
-              className={`group block w-full overflow-hidden rounded-[12px] bg-charcoal/5 transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-[1.08] hover:shadow-[0_14px_30px_-10px_rgba(0,0,0,0.45)] focus-visible:scale-[1.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss ${fills ? 'h-full' : 'aspect-square'}`}
+              className={`group relative block w-full rounded-[12px] transition-transform duration-[240ms] ease-[cubic-bezier(0.33,0,0.2,1)] hover:scale-[1.06] focus-visible:scale-[1.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss ${fills ? 'h-full' : 'aspect-square'}`}
               style={{ transformOrigin: fit ? growFrom(i, fit.cols, fit.rows) : 'center' }}
             >
-              <PaneImage src={photo.preview} onError={fallBackToFull(photo.full)} grow="" />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 rounded-[12px] opacity-0 shadow-[0_14px_30px_-10px_rgba(0,0,0,0.45)] transition-opacity duration-[240ms] ease-[cubic-bezier(0.33,0,0.2,1)] group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+              <Squircle radius={12} smoothing={1} className="absolute inset-0 bg-charcoal/5">
+                <PaneImage src={photo.preview} ahead onError={fallBackToFull(photo.full)} grow="" />
+              </Squircle>
             </a>
           </li>
         ))}
@@ -652,7 +671,7 @@ export const PhotoPiece: React.FC<{ index: number }> = ({ index }) => {
   }, [current, move]);
 
   return (
-    <div ref={root} className="flex flex-col" style={room !== null ? { height: room } : undefined}>
+    <div ref={root} data-pane-fills="" className="flex flex-col" style={room !== null ? { height: room } : undefined}>
       <h2 {...named} className="sr-only">
         Photo {index + 1} of {count}
       </h2>
@@ -716,6 +735,16 @@ const ABOUT_BODY = 'font-sans text-[14px] leading-[1.5] text-charcoal/80 roomy:t
  * than on R2.
  */
 const MUSEUM_SHELVES = '/museum/shelves.webp';
+
+let aboutAsked = false;
+
+/** Start About's two pictures loading, once, the last thing the page does on arrival, so they're in hand when About opens. */
+export const prefetchAbout = () => {
+  if (aboutAsked) return;
+  aboutAsked = true;
+  if (PORTRAIT) preloadHeld(PORTRAIT.preview);
+  preload(MUSEUM_SHELVES);
+};
 
 /**
  * The shelves' edges fade into the glass, as the room runs off both edges of the screen. They're cut out without
@@ -862,7 +891,7 @@ export const AboutSection: React.FC = () => {
               wrapperClassName="absolute inset-0"
               className="h-full w-full bg-charcoal/5"
             >
-              <PaneImage src={PORTRAIT.preview} alt="Aditya Vishwakarma" onError={fallBackToFull(PORTRAIT.full)} grow="" />
+              <PaneImage src={PORTRAIT.preview} alt="Aditya Vishwakarma" ahead onError={fallBackToFull(PORTRAIT.full)} grow="" />
             </Squircle>
           </div>
         )}

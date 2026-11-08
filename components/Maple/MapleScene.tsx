@@ -21,10 +21,11 @@ import {
 import { buildClouds, makePuffAtlas } from './clouds';
 import { buildTufts, makeTuftAtlas } from './grass';
 import { makeLeafAtlas } from './leafAtlas';
-import { buildDaisies, buildGrove, makeDaisyAtlas, makeGroveAtlas } from './scenery';
+import { buildDaisies, buildGrove, groveTops, makeDaisyAtlas, makeGroveAtlas } from './scenery';
 import { FAR_RIDGE, NEAR_RIDGE, buildGround, buildRidge, farRidgeHeight, groundHeight, nearRidgeHeight } from './terrain';
 import { EYE, FAN, LOOK, TARGET } from './shot';
 import { buildMaple, type MapleModel } from './tree';
+import { ShootingStars } from './shootingStars';
 import { Gusts, sway } from './wind';
 import Flights from './Flights';
 import InkPass from './InkPass';
@@ -47,6 +48,8 @@ export interface MapleHandle {
   nextGust: () => number;
   /** Where the eye is, what it's turned on (while the camera is free) and how wide it sees, for framing a shot by hand. */
   view: () => { position: THREE.Vector3; target: THREE.Vector3 | null; fov: number };
+  /** Sets a star falling now, by night, if there's a clear path: where it runs on the screen, each end in -1 to 1. */
+  shootingStar: () => { from: readonly [number, number]; to: readonly [number, number] } | null;
   /** Frames drawn so far. */
   frames: () => number;
   /** Whether a point on the page, in client pixels, falls on the tree as it's drawn just now: its leaf masses, or its trunk. */
@@ -278,7 +281,7 @@ const Shot: React.FC<{ free: boolean; fov: number; clear: number; motion: { movi
  * Only when the Canvas is set to draw nothing on its own
  * (`frameloop="never"`); any other Canvas draws at its own pace.
  */
-const Pacer: React.FC<{ wind: Gusts; motion: { moving: boolean }; drawn: { frames: number }; paused: boolean }> = ({ wind, motion, drawn, paused }) => {
+const Pacer: React.FC<{ wind: Gusts; stars: ShootingStars; motion: { moving: boolean }; drawn: { frames: number }; paused: boolean }> = ({ wind, stars, motion, drawn, paused }) => {
   const frameloop = useThree((s) => s.frameloop);
 
   useEffect(() => {
@@ -289,13 +292,13 @@ const Pacer: React.FC<{ wind: Gusts; motion: { moving: boolean }; drawn: { frame
       if (paused && drawn.frames >= 2 && !motion.moving) return;
       raf = requestAnimationFrame(tick);
       // A little slack, so a 60 Hz screen asked for 30 shows every other frame rather than drifting.
-      if (now - last < 1000 / (wind.carrying || motion.moving ? PACE.full : PACE.calm) - 2) return;
+      if (now - last < 1000 / (wind.carrying || motion.moving || stars.falling ? PACE.full : PACE.calm) - 2) return;
       last = now;
       advance(now / 1000);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [wind, motion, drawn, paused, frameloop]);
+  }, [wind, stars, motion, drawn, paused, frameloop]);
 
   // A canvas resized is a canvas cleared: paused, it's drawn once more at its new size, so the scene round the
   // edges of what covers it stays.
@@ -452,6 +455,13 @@ const MapleScene: React.FC<{
     });
     cores.frustumCulled = false;
 
+    const ground = buildGround();
+    const grove = buildGrove();
+    const nearRidge = buildRidge(NEAR_RIDGE, nearRidgeHeight);
+    const farRidge = buildRidge(FAR_RIDGE, farRidgeHeight);
+    const sky = makeSkyMaterial(uniforms);
+    const skyline = [ground, nearRidge, farRidge].map((g) => g.getAttribute('position').array as Float32Array);
+
     return {
       model,
       atlas,
@@ -464,14 +474,15 @@ const MapleScene: React.FC<{
       drawn: { frames: 0 },
       motion: { moving: false },
       wind: new Gusts(Math.random),
+      stars: new ShootingStars(sky.uniforms as never, [...skyline, groveTops(grove)], model.lobes),
       geometry: {
-        ground: buildGround(),
+        ground,
         tufts: buildTufts(),
         daisies: buildDaisies(),
-        grove: buildGrove(),
+        grove,
         clouds: buildClouds(),
-        nearRidge: buildRidge(NEAR_RIDGE, nearRidgeHeight),
-        farRidge: buildRidge(FAR_RIDGE, farRidgeHeight),
+        nearRidge,
+        farRidge,
         sky: new THREE.SphereGeometry(600, 48, 24),
       },
       material: {
@@ -484,7 +495,7 @@ const MapleScene: React.FC<{
         clouds: makeCloudMaterial(uniforms, puffAtlas),
         nearRidge: makeRidgeMaterial(uniforms, SCENE_COLOURS.ridgeNear, 0.42),
         farRidge: makeRidgeMaterial(uniforms, SCENE_COLOURS.ridgeFar, 0.55),
-        sky: makeSkyMaterial(uniforms),
+        sky,
       },
     };
   }, [initialSeason, initialDusk]);
@@ -516,6 +527,7 @@ const MapleScene: React.FC<{
     const { wind } = world;
     handle.current = {
       gust: () => wind.trigger(),
+      shootingStar: () => world.stars.launch(get().camera as THREE.PerspectiveCamera),
       nextGust: () => (wind.blowing ? 0 : Math.max(0, wind.nextAt - wind.time)),
       view: () => {
         const { camera: eye, controls } = get();
@@ -590,12 +602,21 @@ const MapleScene: React.FC<{
     world.drawn.frames++;
   });
 
+  // By night the sky is clear, and now and then a star falls in it: not with a pane open, nor for anyone who'd rather
+  // nothing moved that needn't. The clouds, dissolved by then, stop being drawn at all.
+  const clouds = useRef<THREE.Mesh>(null);
+  useFrame((_, dt) => {
+    const night = world.uniforms.uDusk.value;
+    if (clouds.current) clouds.current.visible = night < 1;
+    world.stars.update(Math.min(dt, 1 / 10), camera as THREE.PerspectiveCamera, night === 1, !calm.current && !world.motion.moving && !reducedMotion());
+  });
+
   return (
     <>
-      <Pacer wind={world.wind} motion={world.motion} drawn={world.drawn} paused={paused} />
+      <Pacer wind={world.wind} stars={world.stars} motion={world.motion} drawn={world.drawn} paused={paused} />
       <Shot free={freeCamera} fov={fov} clear={clear} motion={world.motion} />
       <mesh ref={sky} geometry={world.geometry.sky} material={world.material.sky} renderOrder={1} frustumCulled={false} />
-      <mesh geometry={world.geometry.clouds} material={world.material.clouds} />
+      <mesh ref={clouds} geometry={world.geometry.clouds} material={world.material.clouds} />
       <mesh geometry={world.geometry.farRidge} material={world.material.farRidge} />
       <mesh geometry={world.geometry.nearRidge} material={world.material.nearRidge} />
       <mesh geometry={world.geometry.ground} material={world.material.ground} />

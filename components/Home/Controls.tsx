@@ -63,7 +63,7 @@ const Mark: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  * on the tree sends the gust. The music has no key: it only plays when it's
  * turned on here.
  */
-const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void; onSeason: () => void }> = ({ margin, compact, onGust, onSeason }) => {
+const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void; onSeason: () => void; className?: string }> = ({ margin, compact, onGust, onSeason, className = '' }) => {
   // const muted = useMuted();
   const touch = useTouch();
   const dark = useTheme() === 'dark';
@@ -112,7 +112,7 @@ const Controls: React.FC<{ margin: number; compact: boolean; onGust: () => void;
       role="group"
       aria-label="Controls"
       data-open={touch && shown ? '' : undefined}
-      className={`group fixed z-[60] w-[var(--closed)] overflow-hidden font-sans text-[13px] italic text-charcoal/55 dark:text-paper transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${opens.pane}`}
+      className={`group fixed z-[60] w-[var(--closed)] overflow-hidden font-sans text-[13px] italic text-charcoal/55 dark:text-paper transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${opens.pane} ${className}`}
       style={{ ...pillGlassStyle, top, left, borderRadius: row / 2, '--closed': `${closed}px`, '--open': open } as React.CSSProperties}
     >
       <button

@@ -302,6 +302,15 @@ export function buildGrove(): THREE.InstancedBufferGeometry {
   return g;
 }
 
+/** The top of each tree in a grove, as points, x, y, z. */
+export const groveTops = (grove: THREE.InstancedBufferGeometry) => {
+  const base = grove.getAttribute('aBase');
+  const tree = grove.getAttribute('aTree');
+  const tops = new Float32Array(base.count * 3);
+  for (let i = 0; i < base.count; i++) tops.set([base.getX(i), base.getY(i) + tree.getX(i), base.getZ(i)], i * 3);
+  return tops;
+};
+
 /* ─── The river ────────────────────────────────────────────────── */
 
 /**

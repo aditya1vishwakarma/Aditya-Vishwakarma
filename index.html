@@ -30,10 +30,43 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap"
     rel="stylesheet">
 
+  <!-- The meadow, from the very first paint, by day or night: nothing has loaded yet to paint it. Colours as MEADOW and
+       EDGES in components/Home/HomeHero.tsx, which takes over from this. The museum has its own look. -->
+  <script>
+    (function () {
+      if (/^#\/(mindmuseum|moodboard)/i.test(location.hash)) return;
+      var night = false;
+      try { night = localStorage.getItem('site-theme') === 'dark'; } catch (e) {}
+      document.documentElement.dataset.boot = night ? 'night' : 'day';
+    })();
+  </script>
+
   <style>
+    html[data-boot='day'] {
+      background-color: #69B9EC;
+      --boot-meadow: linear-gradient(180deg, #4FADE8 0%, #73BDEC 30%, #A6D4EE 49%, #A9CDB9 52%, #9CC86A 60%, #8ABE5A 100%);
+    }
+
+    html[data-boot='night'] {
+      background-color: #1C284E;
+      --boot-meadow: linear-gradient(180deg, #1B264C 0%, #2A3F67 30%, #3D5A7B 49%, #425750 52%, #496545 60%, #4A693A 100%);
+    }
+
+    html[data-boot]::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image: var(--boot-meadow);
+    }
+
+    html[data-boot] body {
+      background: transparent;
+    }
+
     body {
       background-color: #FBFAF8;
       color: #333333;

@@ -10,7 +10,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - To add a project or a post:
   1. Write its page under `pages/works` or `pages/blog`, using `WritingLayout` and `Prose`.
   2. Give it an entry in `constants.ts` (`PROJECTS` or `BLOG_POSTS`, with its `path`).
-  3. Add its address to `PIECES` in `routes.tsx`.
+  3. Add its address to `PIECES` in `routes.tsx`, with `page(() => import(…))`, so it's loaded apart from the page.
 
   See `components/Writing/renamewriting.md`.
 
@@ -37,7 +37,8 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 4. **expandedView (a list opened out).** A list's open-out button (Work, Photos). It isn't about reading one piece, but it works as contentView does: the reading margin, the thickened glass, Back and close, the nav away and the scene stopped. Back returns the list to its own size. The list's name and line about it head the list itself.
 
 **A photo** opens in the pane it was chosen in:
-- **From the list:** in the list's own pane, at the same size, so the glass never resizes for it. The head becomes Back and close, and the scene pauses while the photo is up.
+- **From the list:** in the list's own pane, at the same size, so the glass never resizes for it. The head becomes Back, open out and close, and the scene pauses while the photo is up.
+- **Opened out from there:** the same photo in contentView, as if chosen from expandedView. Back goes to the grid, in expandedView.
 - **From expandedView:** in contentView.
 - **Between photos:** a plain quick fade, not the notecard's turn.
 - **On a touch screen** (a phone, or a tablet without a mouse), a photo is handled by touch (`components/Home/photoGestures.ts`):
@@ -89,7 +90,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - the hero title: by the screen's shorter side, 15–24px (as small as 13px to fit beside the name); on the phone layout 13–17px
   - list names and article titles: `clamp()` between a phone size and a desktop size
 - **Phone lists keep to the least it takes to choose:**
-  - a selected work is a row with a small picture, its name, and what it is and when
+  - a selected work is a row with a small picture, its name, and what it is
   - un-selected works and posts are cards of their own (see *Pointing at things*), with no dividers between, and no role or date
   - an un-selected work: its name, and its line cut to two
   - a post: its name, its line cut to two, and how long it is to read under them
@@ -101,7 +102,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - **Nothing on the glass is laid out again while the glass changes size.** Content reflowing during a resize stalls the main thread, badly in Firefox.
   - The glass sets off at once (0.44s). Meanwhile what was on it fades out (0.16s), held at the width it had.
   - The next card is built during the move, at the width and height it will have (`usePaneHeld` gives the height), and fades in as the glass lands. It's laid out once, never again frame by frame. It's built unseen during the move rather than after, because building it after the glass lands puts its cost in the very frame where it starts to fade in.
-- **The order, every time:** the glass moves, then the card comes in, then its pictures. Opening Photos out takes about 0.8s: the glass in 0.44s, the grid in by about 0.6s, and the 32 photos in by about 0.8s.
+- **The order, every time:** the glass moves, then the card comes in, then its pictures. Opening Photos out takes about 0.8s: the glass in 0.44s, then the grid, with the 32 photos on it if they're in hand (see Photos), by about 0.6s.
 - **New content at the same size:** the next card is built beneath the old one as soon as the old one starts to leave, and comes in once it has gone (the notecard turn). Building it can't hold the turn up.
 - **Frosted glass is moved or tinted, never faded.** Safari paints faded frosted glass white.
   - To thicken it, animate the opacity of an overlay inside the glass.
@@ -111,6 +112,16 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 ## Performance
 
+- **The order on arrival:** each step is there without waiting on the next.
+  1. The meadow, painted by `index.html` itself, by day or night, before any script has loaded. Its colours are `MEADOW` and `EDGES` in `HomeHero.tsx`: keep them together. The museum's address skips it.
+  2. The name, then the title, in the first, small bundle. They fade up by 1.65s from when the fonts are in (or 0.9s without them), in opacity alone, so they keep moving while the scene is built (`home.css`).
+  3. The scene, in a chunk of its own with three.js (`SceneCanvas.tsx`). It's fetched from the start, and fades up over the meadow as soon as it has drawn.
+  4. The nav and the controls, together, once the title is up and the scene has been up for a second. They wait no longer than 4s after the type starts (`NAV_LATEST_MS`), for a scene that's slow or never comes, and don't wait at all with a pane open.
+  5. Once the page is idle: the off-screen measuring of the lists that `fit` (at once, if a pane is open), the code of the pieces and the museum, the gallery's previews (see Photos), and last, About's two pictures.
+- **What's loaded apart from the page** is wrapped in `LoadGuard` (`components/UI/LoadGuard.tsx`), so a chunk that fails, or a screen with no WebGL, costs only that part, not the whole page.
+- **The name and title's entrance animates opacity alone.** No masks, filters or paired transforms: those stick, or slide the letters about, while the scene is being built.
+- **About's two pictures** are fetched on every screen, except on a connection saving data. The portrait, once decoded, comes in with its card, with no wait and no fade of its own (`ahead` on `PaneImage`). It's the one exception to the glass, card, pictures order, and only because it costs nothing by then. Opened before it's decoded, it comes in as any other.
+- **A piece's code and the museum's** are fetched at idle on a connection that's neither slow nor saving data. The museum's images wait until it's opened.
 - **A pane's pictures wait for the glass to land and the card to come in** (`usePaneSettled`, per card). A photo after a photo doesn't wait, so stepping through them stays quick.
 - **They come in four a frame**, in the order they're laid out, so the browser never decodes and draws a whole grid in one frame. Each fades up only once it's decoded.
 - A section's pictures start loading when its nav item is pointed at or focused (Work, Photos).
@@ -153,7 +164,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 ## Work
 
-- **Selected Works**, the pane's title, is a grid of tiles. Each is a picture over its name, what it is and when, and a line about it, wrapping within the tile.
+- **Selected Works**, the pane's title, is a grid of tiles. Each is a picture over its name, what it is, and a line about it, wrapping within the tile. Its date is kept to the piece itself.
   - The columns follow the room the list actually has, using container queries: one, then two (from 440px), then three (from 680px). In expandedView, four from 920px.
   - **Past three selected works** (four in expandedView) the row becomes a horizontal carousel that snaps to each tile, with a sliver of the next one showing so it's plain there are more.
 - **A rail on the right** marks the two parts, Selected and Un-Selected: a line for each, as long as the part is tall, with its name set vertically along it. The part in view is darker, and each is a way to jump there. Any list can have one: mark its parts with `data-pane-part` and pass `parts` on its card.
@@ -197,14 +208,26 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 - The grid fills the pane exactly, under its line about itself.
 - **Wait before the photos appear:** switching to Photos waits for the last list to leave. From a narrower section, the glass also resizes first.
-- **The pictures themselves** are already loaded by then: the previews are fetched at idle on desktop, and on pointing at Photos elsewhere.
+- **The pictures themselves** are already loaded by then: the previews are fetched at idle on desktop, and on pointing at Photos elsewhere. Once decoded they're kept, and come in with the card, with no wait or fade of their own: on opening Photos, and on coming Back from a photo.
+- **No scrollbar:** the grid and a photo fill the glass exactly, so the pane doesn't scroll under them. Where the window's too small for the grid to fill it, it scrolls.
 - **The previews must be plain AVIFs**, about 800px on the short side, as `devtools/make-previews.mjs` makes them. Firefox can't decode tiled AVIFs, or ones with a crop box. It then falls back to the full-size photo, and decoding 32 of those at once froze opening Photos out for about 2s.
-- **Pointing at a photo** lifts it out of its cell: it grows 8% over its neighbours, with a shadow, from the corner that keeps it inside the grid (a photo on the right edge grows leftwards, and so on).
+- **A photo's corners** are squircles at full smoothing, as the glass and Work's pictures are.
+- **Pointing at a photo** lifts it out of its cell: it grows 6% over its neighbours in 0.24s, starting slowly so it eases up rather than popping, with a shadow fading in, from the corner that keeps it inside the grid (a photo on the right edge grows leftwards, and so on).
 
 ## Season
 
 - The scene opens in autumn from October through February, and in summer from March through September (`seasonOf` in `components/Maple/mapleConfig.ts`).
 - S swaps it, or *Change Seasons* in the controls (*Swap Seasons* on a touch screen). On the dev page, `?season=` sets it.
+
+## Night
+
+Dark mode is night in the scene (`EVENING` in `components/Maple/mapleConfig.ts`).
+
+- **The sky is clear:** the clouds dissolve as the night comes on, gone before the stars come out, and aren't drawn at all once it's night.
+- **Now and then a star falls** (`components/Maple/shootingStars.ts`): the first 12–30s into the night, then every 40–90s. Not with a pane open, and not with reduced motion on.
+  - **Its look:** dead straight and fast (0.55–0.85s), on any of the four diagonals, with a small bright head and a tail thinning away behind. The head burns out at the end of the line, and the tail lingers and fades for about 0.55s. It's drawn apart from the wind's lines, which are slow, curved and swell through their middles.
+  - **Only in open sky:** each path is chosen on the screen as the shot stands then, wholly above the highest land in view, far trees included, and clear of the maple's crown. If none is clear, none falls that time.
+  - It can pass behind the nav's glass, which frosts it like anything else behind the nav.
 
 ## Type
 
@@ -244,7 +267,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 
 - `devtools/maple.html`, served by the dev server only, is the one page for working on the scene.
 - URL options: `?season=autumn`, `?gust=2`, `?hud=0` (no controls) and `?hero=0` (the scene alone).
-- The scene's handle is on the console as `maple`: `maple.current.gust()`, `maple.current.treeAt(x, y)`.
+- The scene's handle is on the console as `maple`: `maple.current.gust()`, `maple.current.treeAt(x, y)`, and by night `maple.current.shootingStar()`.
 
 ## Retired
 

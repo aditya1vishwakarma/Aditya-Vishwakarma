@@ -190,8 +190,9 @@ export const SCENE_COLOURS = {
  * lit now by the moon rather than the afternoon sun: no gold in it, dimmed
  * and cooled a touch (`moonlight`), and a pale sheen on the side of the maple
  * that faces the moon. The night reaches the land only where it would: the
- * river mirrors the sky, the clouds are lit by the moon, and the distance
- * fades into the blue.
+ * river mirrors the sky, and the distance fades into the blue. The sky is
+ * clear: the clouds dissolve as the night comes on, and now and then a star
+ * falls (`shootingStars`).
  */
 export const EVENING = {
   /** The sky from the horizon up: how high each colour lies, in degrees, and the colour. */
@@ -209,7 +210,23 @@ export const EVENING = {
    * are. Fewer than on a moonless night; the moon washes out the faint ones.
    */
   stars: { patch: 1.5, share: 0.3, light: 0.9 },
-  /** Clouds lit by the moon as they are by the sun, only dimmer and bluer. */
+  /**
+   * A star falling (shootingStars.ts). Seconds until the first once it's night,
+   * and between one and the next; how long it takes to run its line, and how
+   * long what it left lingers; how long the line is, as a share of the screen's
+   * shorter side; how steep, in degrees from level, either way, in any of the
+   * four diagonals; and how much of the line its tail covers.
+   */
+  shootingStars: {
+    first: [12, 30] as const,
+    every: [40, 90] as const,
+    flight: [0.55, 0.85] as const,
+    linger: 0.55,
+    length: [0.22, 0.4] as const,
+    slant: [22, 62] as const,
+    tail: 0.6,
+  },
+  /** Clouds lit by the moon as they are by the sun, only dimmer and bluer, while they dissolve. */
   cloud: '#425371',
   cloudShade: '#222F4F',
   /** The moon's light, laid over the land's own colours: dimmer than the sun's, and a little cooler. */
