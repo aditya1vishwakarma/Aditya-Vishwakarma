@@ -13,7 +13,7 @@ const Placemarks = () => {
     >
       <Section>
         <Lead>
-          Placemarks (formerly Architextures) is an app for organizing the buildings and spaces that inspire you.
+          Placemarks (formerly Architextures) is an app for organizing the buildings and spaces that inspire you. [Coming to TestFlight Mid-November)]
         </Lead>
       </Section>
 
@@ -30,24 +30,23 @@ const Placemarks = () => {
           items={[
             {
               type: 'image',
-              src: 'https://images.adityavishwakarma.com/projectvideos/Home%20Page.jpg',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Placemarks/Home%20View.avif',
               alt: 'Screenshot of the Placemarks home grid',
               caption: "Current Home Page Layout.",
             },
             {
-              type: 'video',
-              src: 'https://images.adityavishwakarma.com/projectvideos/rough%20prototype.mov',
-              alt: 'Demo walkthrough of adding a photo',
-              caption: 'Adding a photo, reviewing tags. Vision ONLY in this demo, as the CreateML model was broken at the time',
+              type: 'image',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Placemarks/Collection_Detail.avif',
+              alt: 'Collections - Easy way to group a trip\'s photos together.',
+              caption: "Current Home Page Layout.",
             },
             {
               type: 'video',
-              src: 'https://images.adityavishwakarma.com/projectvideos/detaildemo.mp4',
-              alt: 'Detail view of a saved building entry',
-              caption: 'Detail View Page... polish still needed!',
+              src: 'https://images.adityavishwakarma.com/projectvideos/Placemarks/Suggestions%20%26%20Tagging.mp4',
+              alt: 'How tagging photos looks like. Photos are processed fully on-device!',
+              caption: 'How tagging photos looks like. Photos are processed fully on-device!',
             },
           ]}
-          caption="Early Placemarks demos."
         />
 
         <H3>I went in with three goals in mind:</H3>
