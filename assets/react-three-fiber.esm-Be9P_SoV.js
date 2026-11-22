@@ -1,4 +1,4 @@
-import{X as Ox,Y as Bx,R as zx,Z as d1,r as yt,j as Ei}from"./index-Dc6i8J0m.js";/**
+import{Y as Ox,Z as Bx,R as zx,_ as d1,r as yt,j as Ei}from"./index-C5bbrQ5S.js";/**
  * @license
  * Copyright 2010-2026 Three.js Authors
  * SPDX-License-Identifier: MIT
