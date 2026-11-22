@@ -32,21 +32,25 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap"
     rel="stylesheet">
-  <!-- Switzer, for the pieces (WritingLayout): its faces declared without holding up the first paint, as only a piece
-       uses them. Variable, upright and italic, every weight in two files; fetched once a piece is drawn, or ahead of
-       that at idle (prefetchPieces in components/Home/routes.tsx). -->
+  <!-- Switzer, for the home page's name and title and for the pieces (WritingLayout). Declared up front, as Newsreader
+       is, so the name and title wait for it (HomeHero waits on the fonts) rather than coming in in Helvetica and
+       changing. Variable, upright and italic, every weight in two files; the upright's fetched for the name, the
+       italic once a piece uses it. -->
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link href="https://api.fontshare.com/v2/css?f[]=switzer@1,2&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://api.fontshare.com/v2/css?f[]=switzer@1,2&display=swap" rel="stylesheet"></noscript>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@1,2&display=swap" rel="stylesheet">
 
   <!-- The meadow, from the very first paint, by day or night: nothing has loaded yet to paint it. Colours as MEADOW and
-       EDGES in components/Home/HomeHero.tsx, which takes over from this. The museum has its own look. -->
+       EDGES in components/Home/HomeHero.tsx, which takes over from this. Night if the device is dark, unless the
+       controls turned it against the device (components/Home/theme.ts). The museum has its own look. -->
   <script>
     (function () {
       if (/^#\/(mindmuseum|moodboard)/i.test(location.hash)) return;
-      var night = false;
-      try { night = localStorage.getItem('site-theme') === 'dark'; } catch (e) {}
+      var night = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      try {
+        var chosen = localStorage.getItem('site-theme-override');
+        if (chosen === 'dark' || chosen === 'light') night = chosen === 'dark';
+      } catch (e) {}
       document.documentElement.dataset.boot = night ? 'night' : 'day';
     })();
   </script>
@@ -130,8 +134,8 @@
       }
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-C5bbrQ5S.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CfM4J9QG.css">
+  <script type="module" crossorigin src="/assets/index-B591xPQ7.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BPOgpaMZ.css">
 </head>
 
 <body>
