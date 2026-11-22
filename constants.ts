@@ -25,6 +25,12 @@ export const SHORT_MAX = 500;
 /** The one page's phone layout: a screen that's narrow, or short. */
 export const isCompact = (width: number, height: number) => width < MOBILE_MAX || height < SHORT_MAX;
 
+/**
+ * A piece split in two, its details pinned in a column beside what's read: as wide as an iPad on its side, and as
+ * tall as `roomy`. The `split` variant in index.css is the same: keep them together.
+ */
+export const SPLIT_QUERY = '(min-width: 1024px) and (min-height: 500px)';
+
 export const isMobileViewport = () =>
   typeof window !== 'undefined' && window.innerWidth < MOBILE_MAX;
 
@@ -38,6 +44,7 @@ export const PROJECTS: Project[] = [
     imageUrl: 'https://images.adityavishwakarma.com/projecthumbnails/placemarks.jpg',
     date: 'Summer 2026',
     role: 'PM/ Developer',
+    tools: ['Xcode 27', 'Figma', 'Claude Code'],
     path: '/works/placemarks',
     isSelected: true
   },
@@ -50,6 +57,7 @@ export const PROJECTS: Project[] = [
     imageUrl: 'https://images.adityavishwakarma.com/projecthumbnails/djx.jpg',
     date: 'March 2026',
     role: 'Product Manager',
+    tools: ['Claude Code', 'Figma'],
     path: '/works/djx-project',
     isSelected: true
   },
@@ -121,12 +129,13 @@ export const BLOG_POSTS: BlogPost[] = [
     readTime: '3 min read',
     category: 'Design',
     excerpt: 'How I designed my first app icon for Placemarks, from concept to interation to final design.',
+    tools: ['Icon Composer', 'Figma'],
     path: '/blog/app-icon-design',
     content: `I've never created a logo before. Let alone an app icon.`
   },
   {
     id: '2',
-    title: 'Curation is the best skill anyone can have.',
+    title: 'Curation is the greatest skill.',
     date: 'Random Note, 2025',
     readTime: '4 min read',
     category: 'Random Thoughts',

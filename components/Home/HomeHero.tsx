@@ -8,6 +8,7 @@ import Navbar, { navBottom, navGap, navPlace } from '../Layout/Navbar';
 import { useSafeArea, type Insets } from './safeArea';
 import { MOBILE_MAX, isCompact } from '../../constants';
 import SectionPane, { PaneMeasure, VEIL_MS, railRoom, type PaneBox, type PaneCard } from './SectionPane';
+import { PiecePath } from '../Writing/pieces';
 import TextHaze from './TextHaze';
 import Controls from './Controls';
 import { usePaintTheme, useTheme } from './theme';
@@ -400,7 +401,9 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const inPlace = route.mode === 'photo' && !out;
   // Filling the screen inside the reading margin, the nav away: a piece, the expanded view, or a photo from it.
   const reading = route.mode === 'view' || (route.mode === 'photo' && out) || expanded;
-  const layoutOf = section ? (reading ? 'view' : `select:${section.id}`) : 'home';
+  // A piece fills the screen, a layout of its own: going to one from the expanded view is a move, as from a list.
+  const piece = route.mode === 'view';
+  const layoutOf = section ? (piece ? 'piece' : reading ? 'view' : `select:${section.id}`) : 'home';
 
   // The nav and the controls come on after the title and the tree, or at once with a pane open, which needs them.
   const [chromeIn, setChromeIn] = useState(false);
@@ -562,7 +565,10 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const listBottom = Math.max(edge + safe.bottom, height - below - Math.min(section?.most?.height ?? Infinity, fit ?? Infinity));
   const box: PaneBox | null = !section
     ? null
-    : reading
+    : piece
+      ? // The whole screen, inside the safe area: the glass's own tint keeps the scene showing through.
+        { top: safe.top, right: safe.right, bottom: safe.bottom, left: safe.left }
+      : reading
       ? { top: near + safe.top, right: near + safe.right, bottom: near + safe.bottom, left: near + safe.left }
       : compact
         ? { top: below, right: edge + safe.right, bottom: edge + safe.bottom, left: edge + safe.left }
@@ -574,7 +580,25 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
   const card: PaneCard | null = !section
     ? null
     : route.mode === 'view'
-      ? { key: `view:${route.path}`, look: 'view', back: true, node: <LoadGuard><Suspense fallback={null}><route.Page /></Suspense></LoadGuard> }
+      ? {
+          key: `view:${route.path}`,
+          look: 'view',
+          back: true,
+          // Split in two, a piece draws its own Back and Home. It's handed its address with it, so one on its way out
+          // keeps its own.
+          ownHead: true,
+          // It slides in from the right; going back to the piece before, from the left (`turn`, from its link).
+          slide: (location.state as { turn?: number } | null)?.turn === -1 ? -1 : 1,
+          node: (
+            <PiecePath.Provider value={route.path}>
+              <LoadGuard>
+                <Suspense fallback={null}>
+                  <route.Page />
+                </Suspense>
+              </LoadGuard>
+            </PiecePath.Provider>
+          ),
+        }
       : route.mode === 'photo'
         ? {
             // Opened out, it's a new card at the new size: the glass moves with nothing on it, as for the list.
@@ -665,7 +689,7 @@ const HomeHero: React.FC<HomeHeroProps> = ({ season: opening, handle: given, ove
                 card={card}
                 box={box}
                 layout={layoutOf}
-                radius={compact ? 30 : 44}
+                radius={piece ? 0 : compact ? 30 : 44}
                 railGutter={railGutter}
                 onExpand={onExpand}
                 onBack={back}

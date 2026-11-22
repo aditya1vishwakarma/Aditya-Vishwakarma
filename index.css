@@ -12,6 +12,10 @@
    which a phone held sideways isn't. The other side of isCompact in
    constants.ts (MOBILE_MAX, SHORT_MAX): keep them together. */
 @custom-variant roomy (@media (width >= 740px) and (height >= 500px));
+/* A piece split in two: its details pinned in a column on the left, what's to read scrolling on the right
+   (components/Writing/WritingLayout.tsx). An iPad on its side and every desktop: wide enough for both columns, and
+   tall enough, as roomy is. SPLIT_QUERY in constants.ts is the same: keep them together. */
+@custom-variant split (@media (width >= 1024px) and (height >= 500px));
 /* The dark look, chosen from the controls (components/Home/theme.ts). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -23,6 +27,8 @@
 
     --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-serif: "Newsreader", serif;
+    /* The pieces' one face, from Fontshare: as near as there is to Suisse Int'l (index.html). */
+    --font-switzer: "Switzer", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
     --radius-squircle: 24px;
 
@@ -65,34 +71,69 @@
 }
 
 @layer utilities {
-    /* Fluid typography rules using clamp */
-    .fluid-text-lg { font-size: clamp(1.125rem, 1.2vw + 0.9rem, 1.25rem); }
+    /* A piece's words: 16px on a phone to 18px on a laptop and up. */
+    .fluid-text-body { font-size: clamp(1rem, 1vw + 0.8rem, 1.125rem); }
 
-    /* Editorial Grid Container (replaces standard max-w constraints) */
-    .editorial-grid {
-        display: grid;
-        grid-template-columns: 
-            minmax(0, 1fr)
-            min(100%, 48rem) /* Equivalent to max-w-3xl for the text block */
-            minmax(0, 1fr);
-        /* Removed column-gap to prevent blowing out 100% width on mobile */
+    /*
+     * What's read in a piece (WritingLayout): its words, and its pictures, galleries and embeds with them, at one
+     * width, centred in the column they're in, so the words never look a thin line beside a picture. One that's
+     * let through (`bleed="full"`) runs the column's whole width, to its margins. The column is a container, so
+     * that's worked out against its width however deep in a Section it is, and the words keep their usual flow.
+     */
+    .writing-piece {
+        /* The width of the words and what's with them: about 80 characters. Also the stacked piece's details. */
+        --measure: 46rem;
+        /* Thin margins either side, split in two; narrower, the pane's own padding is the margin. */
+        --gutter: 0px;
     }
-    
-    /* Child element alignment rules */
-    .editorial-grid > * {
-        grid-column: 2; /* Default is to sit inside the reading column */
+    @media (width >= 1024px) and (height >= 500px) {
+        .writing-piece {
+            --gutter: clamp(24px, 3vw, 56px);
+            /*
+             * The details' column never scrolls, so its room and its small type are shares of the glass's height
+             * (--pane-h, from the pane): a laptop's (860px) at about the sizes they'd have anyway, a short window's
+             * closer. The title takes what's left (useFitTitle).
+             */
+            --col-y: clamp(12px, calc(var(--pane-h) * 0.023), 24px);         /* its padding, top and foot */
+            --col-head: clamp(28px, calc(var(--pane-h) * 0.037), 32px);      /* Back and Home's row */
+            --col-head-rule: clamp(8px, calc(var(--pane-h) * 0.014), 12px);  /* the rule under them */
+            --col-gap: clamp(12px, calc(var(--pane-h) * 0.028), 28px);       /* rule to title, title to details */
+            --col-rule: clamp(10px, calc(var(--pane-h) * 0.023), 20px);      /* about the details' rules */
+            --col-row: clamp(4px, calc(var(--pane-h) * 0.011), 10px);        /* between the details' rows */
+            --col-value: clamp(14px, calc(var(--pane-h) * 0.019), 16.5px);   /* a detail */
+            --col-label: clamp(10.5px, calc(var(--pane-h) * 0.0135), 11.5px); /* its label */
+            --col-sub: calc(var(--pane-h) * 0.028);                          /* the most the line under the title is */
+        }
     }
-    
-    /* Ensure all images inside the grid are responsive and centered by default */
-    .editorial-grid img {
+    /* The details' column, split in two: solid, a grey, so it reads apart from the glass of the page beside it. Grey
+       either way: a step of 0.045 in OKLCH lightness from the glass, darker by day and lighter by night (0.927
+       against 0.972, the paper with 9.8% charcoal; 0.362 against 0.317, the slate with 7% cream). Its small labels
+       keep over 5:1. */
+    .writing-piece { --info-paper: #E7E7E5; }
+    :root[data-theme="dark"] .writing-piece { --info-paper: #3A3E44; }
+    .writing-column {
+        container-type: inline-size;
+    }
+    .writing-flow {
+        --text: min(100cqi - 2 * var(--gutter), var(--measure));
+        width: var(--text);
+        margin-inline: auto;
+        /* What sits beside the text (`beside`) stays within it. */
+        display: flow-root;
+    }
+    .bleed-full { margin-inline: calc((var(--text) - 100cqi) / 2 + var(--gutter)); }
+
+    /* Pictures are never wider than their room, and centred in it. As a default only (no weight of its own), so a
+       picture's own classes — a gallery tile's, filling it — always win. */
+    :where(.writing-flow img) {
         max-width: 100%;
         height: auto;
         display: block;
         margin-inline: auto;
     }
 
-    /* Ensure code blocks don't cause overflow */
-    .editorial-grid pre {
+    /* Code scrolls rather than widening the page. */
+    .writing-flow pre {
         max-width: 100%;
         overflow-x: auto;
     }

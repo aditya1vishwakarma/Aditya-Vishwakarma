@@ -8,6 +8,7 @@ export interface Project {
   imageUrl: string;
   date: string;
   role: string;
+  tools?: string[]; // What it was made with, one to a line in the piece's details
   path: string; // Added to match Blog structure
   isRedirect?: boolean; // Card that links elsewhere on the site, not a project itself
   isSelected?: boolean; // Listed under Selected Works on /works
@@ -20,6 +21,7 @@ export interface BlogPost {
   readTime: string;
   excerpt: string;
   category: string;
+  tools?: string[]; // What it was made with, one to a line in the post's details
   path: string;
   content: string;
 }

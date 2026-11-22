@@ -9,7 +9,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 - Links within the site are hash links (`#/works/placemarks`). The page routes them itself, so the pane's Back and the browser's back button agree.
 - To add a project or a post:
   1. Write its page under `pages/works` or `pages/blog`, using `WritingLayout` and `Prose`.
-  2. Give it an entry in `constants.ts` (`PROJECTS` or `BLOG_POSTS`, with its `path`).
+  2. Give it an entry in `constants.ts` (`PROJECTS` or `BLOG_POSTS`, with its `path`). The piece reads its details from there: its subheading (a project's `description`, a post's `excerpt`), date, role or read time, category, and a project's `tools`. A prop on `WritingLayout` overrides any of them.
   3. Add its address to `PIECES` in `routes.tsx`, with `page(() => import(…))`, so it's loaded apart from the page.
 
   See `components/Writing/renamewriting.md`.
@@ -30,8 +30,8 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
    - **Scene:** it keeps drawing, the camera slides so the tree stays in view beside the pane, and the wind settles.
    - **The field calms:** of the daisies that sway, only 5% go on swaying, while the tree sways on. They settle one at a time over about 2.4s, and take it up again at home (`FLOWERS_BESIDE` in `components/Maple/MapleScene.tsx`).
 3. **contentView (a piece open to read).** Chosen from a list: a project, a post, or a photo from the expanded view.
-   - **Look:** the glass fills the screen inside the reading margin and thickens to 90% solid over about 0.9s.
-   - **Head:** the same for everything, Back (to the list) and close.
+   - **Look:** the glass thickens to 90% solid over about 0.9s. A project or a post takes the whole screen, square-cornered, inside the safe area, its glass's tint keeping the scene showing through; a photo fills the screen inside the reading margin.
+   - **Head:** the same for everything, Back (to the list) and close. The exception is a project or a post split in two (see Content pages), which draws its own Back and Home in its left column; the pane's head steps aside for it (`ownHead` on the card).
    - **Nav:** it moves up off the screen.
    - **Scene:** it stops drawing once the glass has thickened, and starts again when the pane leaves this state. The camera doesn't move.
 4. **expandedView (a list opened out).** A list's open-out button (Work, Photos). It isn't about reading one piece, but it works as contentView does: the reading margin, the thickened glass, Back and close, the nav away and the scene stopped. Back returns the list to its own size. The list's name and line about it head the list itself.
@@ -62,6 +62,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - A list's pane has its right edge on it, and its bottom edge too unless what's on it is shorter than the room (Writing, Contact and About; see contentSelect's height).
   - The name's and the title's last baselines sit on it.
 - **contentView and expandedView:** the pane comes nearer, 18px from every edge, for the room. Nothing else is there to line up with, since the nav has gone.
+  - **A project or a post** has no margin: its pane takes the whole screen, with square corners (a layout of its own, `piece` in `HomeHero.tsx`, so coming to one from expandedView is still a move).
 - **Phone:**
   - The type sits on a 24px margin.
   - The nav and the pane sit 14px from the edges (`navPlace` in `components/Layout/Navbar.tsx`).
@@ -84,7 +85,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - Where they'd run into each other (an iPad, a smaller window), both are set smaller, in proportion, until they fit with 48px between. The title goes no smaller than 13px, and past that only the name shrinks (`--fit`, worked out in `HeroText` in `HomeHero.tsx`).
   - Below 740px, the title stands above the name, flush left.
   - Whenever the title is under 24px, it gets the deeper haze and tighter shadow that small text needs.
-- **Writing inside a piece** goes by width alone, Tailwind's `md:` (740px and up).
+- **A piece splits in two** from 1024px wide and 500px tall (an iPad on its side and every desktop), Tailwind's `split:` variant (`index.css`) and `SPLIT_QUERY` (`constants.ts`): keep the two together. Narrower, it's stacked. Within either, writing goes by width, Tailwind's `md:` (740px and up).
 - **Type scales with the screen** rather than jumping at breakpoints:
   - the name: a tenth of the width, never more than a quarter of the height, then smaller if it must be to fit beside the title
   - the hero title: by the screen's shorter side, 15–24px (as small as 13px to fit beside the name); on the phone layout 13–17px
@@ -104,6 +105,13 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
   - The next card is built during the move, at the width and height it will have (`usePaneHeld` gives the height), and fades in as the glass lands. It's laid out once, never again frame by frame. It's built unseen during the move rather than after, because building it after the glass lands puts its cost in the very frame where it starts to fade in.
 - **The order, every time:** the glass moves, then the card comes in, then its pictures. Opening Photos out takes about 0.8s: the glass in 0.44s, then the grid, with the 32 photos on it if they're in hand (see Photos), by about 0.6s.
 - **New content at the same size:** the next card is built beneath the old one as soon as the old one starts to leave, and comes in once it has gone (the notecard turn). Building it can't hold the turn up.
+- **A piece is pulled across** instead of turning, its title first, as if a hand had hold of it (`slide` on the card, `PULL` in `WritingLayout.tsx`).
+  - **Its card only fades** (0.15s in, 0.26s out), so the column's furniture — its grey, Back and Home, its rule — stays put from one piece to the next. The piece moves its own parts: the title, and the rest (the line under it, the details, and the page).
+  - **Coming:** the title springs in from 120px to the right, lively (a spring of 0.5s, bounce 0.32), overshooting a few pixels and settling; the rest follows 0.09s behind from 72px, on a softer spring (0.62s, bounce 0.18), so it lands last. Going back to the piece before (its link's `turn`), all from the left.
+  - **Going:** the title's pulled away first, 80px the other way from the piece coming, in 0.18s; the rest 0.05s after it, 40px, in 0.22s. The next piece's parts start 0.1s after the last one's start to go.
+  - The column's edges mask what crosses them, so the title seems drawn out from behind the divider.
+  - **Each part runs its own motion,** rather than waiting on its card's cue: a piece whose code is still loading arrives after its card has, and would otherwise stay hidden.
+  - Going anywhere but another piece, a piece just fades with its card. The pane's scroll never goes sideways, so nothing in motion brings up a scrollbar. Not with reduced motion: then pieces fade.
 - **Frosted glass is moved or tinted, never faded.** Safari paints faded frosted glass white.
   - To thicken it, animate the opacity of an overlay inside the glass.
   - To move the nav away, use `translate`.
@@ -146,6 +154,7 @@ The site is one page: the maple scene, and a pane over it. These are the rules i
 ## Nesting
 
 - **Concentric corners:** anything nested in a rounded container keeps its corners concentric with the container's: outer radius = inner radius + the padding between.
+- **A piece is square throughout,** as its full-screen glass is: its pictures, galleries and their controls, video, embeds, callouts, code, tables, and the lift under the pieces either side have no rounded corners. Only the reading-progress ring, which is the pane's, is round.
 - **Smoothing:** anything nested in the pane's squircle corners is smoothed 100% too (`Squircle`, smoothing 1).
   - A selected work's tile: its picture's 18px corners plus 10px of padding make 28px.
   - The way to the museum isn't nested in the pane's corners: it keeps to the column, as the portrait above it does. Its lift reaches 12px past the column, at 28px corners (18px on a phone), the same as a selected work's tile.
@@ -234,11 +243,45 @@ Dark mode is night in the scene (`EVENING` in `components/Maple/mapleConfig.ts`)
 - **Serif:** Newsreader, from Google Fonts.
 - **Sans:** Helvetica Neue, then Helvetica, then Arial (`--font-sans` in `index.css`). There's no web font for the sans.
 - **Small text on the glass** keeps a contrast of at least 4.5:1: charcoal at 75% opacity or more.
+- **The pieces** (`WritingLayout` and `Prose`) are set in one face, **Switzer**, from Fontshare: as near as there is to Suisse Int'l (`font-switzer`). Variable, upright and italic, about 76 KB in all. Its faces are declared in `index.html` without holding up the first paint, and fetched with the pieces' code at idle (`prefetchPieces`), so the first piece opened has them.
+  - **Weights:** the title, the line under it, section headings and the names of the pieces either side are medium (500); what's read is light (300), at 16–18px (`fluid-text-body`) and charcoal at 85%, a touch darker than regular would need, for its thinner strokes; bold in it is semibold (600).
+  - **Tracking** tightens as the type grows, as Suisse's does: −0.02em for the title and section headings (`H2`), −0.01em for the line under the title, `H3` and the pieces either side, none for what's read. Small capitals keep their open 0.16em.
+  - The title is led at 0.95.
 
 ## Content pages
 
-- A page is `WritingLayout` (title, date, read time and category) around `Prose` components. It has no back link or page chrome of its own; the pane provides Back, close and the reading-progress ring.
-- A gallery's lightbox covers the pane, and its keys take precedence over the pane's: Escape closes the picture first.
+- A page is `WritingLayout` around `Prose` components. Its details come from its entry in `constants.ts` (see One page), and its props override them.
+- **Split in two** (`split:`):
+  - **The left column** is pinned, as tall as the glass, `clamp(340px, 30vw, 460px)` wide, and solid: a grey, so it reads as the piece's information, a step of 0.045 in OKLCH lightness from the glass beside it, darker by day (`#E7E7E5`) and lighter by night (`#3A3E44`) (`--info-paper` in `index.css`). From the top: *← Back* at its left and *Home* at its right, as words with no pill; a rule; the title and the line under it; and at the foot the details. The page beside it starts level with it.
+  - **It never scrolls, at any size.** All in it but its sides (20–28px, by width) is sized by the glass's height (`--col-*` in `index.css`, shares of `--pane-h`), at about these sizes on a laptop (860px tall) and closer on a short window (500px); the title takes what's left.
+
+    | | 500px tall | 860px | 1080px and up |
+    |---|---|---|---|
+    | Padding, top and foot (`--col-y`) | 12px | 20px | 24px |
+    | Back and Home's row (`--col-head`) | 28px | 32px | 32px |
+    | Rule under it (`--col-head-rule`) | 8px | 12px | 12px |
+    | Rule to title, title to details (`--col-gap`) | 14px | 24px | 28px |
+    | About the details' rules (`--col-rule`) | 12px | 20px | 20px |
+    | Between the details' rows (`--col-row`) | 5.5px | 9.5px | 10px |
+    | A detail (`--col-value`) | 14px | 16.3px | 16.5px |
+    | Its label (`--col-label`) | 10.5px | 11.5px | 11.5px |
+
+    The title's top is trimmed to its capitals (`text-box`), so the gap under the rule is the gap that shows.
+  - **The title** is as large as it can be, up to 184px (120px stacked), so long as no word breaks over more than two lines and, split in two, it and the line under it fit what the column has left (`useFitTitle`). It has no least size there: the column never scrolls, so the title is what gives. A word breaks only where its title has a soft hyphen, written `Place&shy;marks`, and shows the hyphen there; without one it keeps to a line. A browser's own hyphenation isn't used: Chrome never hyphenates a capitalised word, as titles' are, and its break points can't be trusted. On a laptop (1512×860) the titles run 87–144px; at 1024×500, 64–105px. The line under it is 0.18 of the title's size, and split in two no more than 2.8% of the glass's height: 14–24px (18–24px stacked). It's fitted again as the column changes size and as the fonts land.
+  - **The details** are rows of a label and its value, the labels in the column's first half and the values from halfway across: Date and Role for a project, Date, Length and Category for a post, then a rule and its Tools, one to a line, if it has any (`tools` on its entry, a project's or a post's). Rows with nothing to say are left out.
+  - **The right column** scrolls the piece on the glass, thickened as for anything read, the scene showing faintly through. Its margins are thin, `clamp(24px, 3vw, 56px)`. Its words and its pictures, galleries and embeds share one width, 46rem (about 80 characters), centred, so the words never look a thin line beside a picture (`.writing-flow` in `index.css`). A picture that needs the room is let through with `bleed="full"`, to the column's margins. `bleed="wide"` keeps to the words' width, as no bleed does.
+  - **The glass is the piece's edge to edge:** it takes back the pane's padding. A pinned column keeps clear of its scroll's padding, so it's pinned that far above it. Going, a piece's column is held where it was, as the card is (see Motion).
+- **Stacked:** the pane's head as for any card (Back and close), then the title (36–120px, its block no more than half the glass's height), the line under it, the details, a rule, the piece, and the pieces either side. All at the words' width, centred.
+- **The pieces either side** close the piece, under a rule: the one before at the left (`← name`), the one after at the right (`name →`), in the order their list has them, without wrapping round. Under each name, on a line of its own and in line with it, which list it's in, in italic and in brackets: *(Selected Works)* or *(Un-Selected Works)*, or a post's category. Pointing at one lifts it, as a list's rows. Following one slides it in (see Motion) and takes the place of this piece in the history, as stepping between photos does, so Back still goes straight to the list. They stand clear of the reading-progress ring.
+- **A gallery** (`MediaGallery`, `components/Writing/Gallery.tsx`) shows all its pictures and videos at once, each one whole, never cropped, never a carousel.
+  - **Symmetric sets:** the items, in order, in runs of one shape — tall (a phone's screenshot, narrower than 0.85), even, or wide (wider than 1.25) — and each run in rows of equal frames: tall and even three across, wide two, evened out (4 is 2 and 2, 5 is 3 and 2), a lone one a row of its own. A row's frames take its items' average shape, each item whole on a faint mat. No frame is taller than `min(78vh, 720px)`: a lone tall one, or a pair, narrows and is centred.
+  - **Shapes** are read from the files as the pane settles (or given, `ratio` on an item); the gallery comes in once they're known, so it never moves once it's there. One that can't be read is taken as 4:3, as is any not read within 4s.
+  - **Beside the text** (`beside="left"` or `"right"`, on a gallery or an `Img`): set to one side at 42% of the words' width, the paragraphs after it wrapping round it, as a magazine's do. Best for one or two tall pictures, a column of their own. On a phone it's between paragraphs as ever; a section heading (`H2`) starts below it; and the words' column holds it, so it never runs into the pieces either side.
+  - **Pointed at, or tabbed to,** a tile lifts over its neighbours, 1.3×, or less where it would reach past the gallery by more than 16px, growing from the side that keeps it in; a shadow comes up under it and the others dim to 60%. Transform and opacity only. The cursor stays the arrow: the lift is the cue, no magnifier.
+  - **A video plays, muted, while it's lifted,** and pauses where it was when let go. Its mark in the lower left is a play sign, beating while it's lifted and still loading; playing, a line runs out beside it, filling as it plays. With a mouse or trackpad the video loads once the gallery's in view, so it starts as soon as it's pointed at; its first frame shows at rest, Safari too.
+  - **Its caption follows the pointer:** a solid label, charcoal by day and cream by night, 18px below and right of it, gliding after it on a spring; left of it near the gallery's right, above it near the screen's foot. Only for a tile with a caption of its own: its number (`02 / 05`) over the caption. A tile without one just lifts, with nothing by the pointer. Tabbed to, it sits in the tile's lower left corner. The gallery's own caption is a line under it. A screen reader hears each tile's number and caption.
+  - **Chosen** (a click, a tap, Enter), a tile opens in the viewer over the whole pane: whole, with its number and caption; arrows, ←/→ and a swipe step through, Escape or the backdrop put it away. Its keys take precedence over the pane's: Escape closes the picture first. On a touch screen, with nothing to point, a tap opens the viewer straight away.
+  - **The first time it scrolls into view,** its tiles come in one after another, 60ms apart, rising 18px as they fade up. Not with reduced motion.
 
 ## Controls
 

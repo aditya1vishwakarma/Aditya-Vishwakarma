@@ -8,14 +8,14 @@ import {
 const DJXProject = () => {
   return (
     <WritingLayout
-      title="Keep This Vibe, DJ X"
+      title="Keep This Vibe"
       category="Product Manager"
       date="March 2026"
       readTime="10 min read"
     >
       <Section className="mb-4">
         <Lead>
-          How I used the full PM cycle to take a personal frustration, stress-test it with data, prototype a solution, and learn that the honest answer is more useful than the optimistic one.
+          Using the PM cycle to take a personal frustration, stress-test with data, prototype a solution and iterate on feedback.
         </Lead>
       </Section>
 
@@ -247,7 +247,7 @@ const DJXProject = () => {
 
         {/* Data table — kept as raw HTML since table structure is unique per use case */}
         <div className="overflow-x-auto mb-6">
-          <table className="min-w-full text-left text-sm whitespace-nowrap bg-moss/5 rounded-squircle border border-moss/10 overflow-hidden">
+          <table className="min-w-full text-left text-sm whitespace-nowrap bg-moss/5 border border-moss/10 overflow-hidden">
             <thead className="uppercase tracking-wider border-b border-moss/10 bg-moss/10 text-charcoal/80 font-bold">
               <tr>
                 <th scope="col" className="px-6 py-4">Persona</th>

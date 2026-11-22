@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion as motionComponent, AnimatePresence } from 'framer-motion';
+import { motion as motionComponent, AnimatePresence, useReducedMotion } from 'framer-motion';
 import Squircle from '../UI/Squircle';
 import { CARD_SHADOW, FROST_NOISE, GLASS_BACKDROP } from './glass';
 import type { MuseumTheme } from './museumTheme';
@@ -28,6 +28,14 @@ export const buttonSize = (compact = false) => (compact ? 40 : 58);
 /** Between the button and the card — the same gap as between the two buttons on a phone. */
 const GAP = 8;
 
+/**
+ * The photo's slow side-to-side drift while the popover is open. It's zoomed
+ * just enough to have width to spare; `travel` (in % of the frame's width)
+ * must stay under (scale − 1) / 2 × 100 — 10 here — or an edge shows.
+ * `duration` is one full swing out and back, in seconds.
+ */
+const PAN = { scale: 1.2, travel: 8, duration: 24 };
+
 interface Props {
   /** Hidden while a pane is out, as Home is. */
   visible: boolean;
@@ -43,6 +51,8 @@ const ShelfAbout: React.FC<Props> = ({ visible, theme, compact = false }) => {
   const glass = { background: theme.glass, backdropFilter: GLASS_BACKDROP, WebkitBackdropFilter: GLASS_BACKDROP };
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  // No drift for anyone who's asked their system for less motion.
+  const still = useReducedMotion();
 
   useEffect(() => {
     if (!visible) setOpen(false);
@@ -128,11 +138,23 @@ const ShelfAbout: React.FC<Props> = ({ visible, theme, compact = false }) => {
                   ))}
                 </div>
                 <Squircle radius={16} className="w-full">
-                  <img
+                  {/* Zoomed in, then panned across the spare width and back.
+                      It opens on the centred photo, and the three eases join
+                      into one smooth swing — quickest through the middle,
+                      easing off at each edge — so it never stalls mid-pan. */}
+                  <motion.img
                     src={SHELF_ABOUT.image}
                     alt={SHELF_ABOUT.imageAlt}
                     decoding="async"
                     className="block aspect-[1200/929] w-full object-cover"
+                    style={{ scale: still ? 1 : PAN.scale }}
+                    animate={still ? undefined : { x: ['0%', `${PAN.travel}%`, `-${PAN.travel}%`, '0%'] }}
+                    transition={{
+                      duration: PAN.duration,
+                      times: [0, 0.25, 0.75, 1],
+                      ease: ['easeOut', 'easeInOut', 'easeIn'],
+                      repeat: Infinity,
+                    }}
                   />
                 </Squircle>
               </div>

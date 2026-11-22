@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AnimatePresence, motion as motionComponent, useIsPresent, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, Maximize2, X } from 'lucide-react';
 import Squircle from '../UI/Squircle';
@@ -50,8 +50,8 @@ const MOVE = ['top', 'right', 'bottom', 'left'].map((edge) => `${edge} ${MOVE_MS
 const LEAVE = 0.16;
 
 /** The head: room above it, its one row — as tall as a list's name or a button, whichever is taller — and room below. */
-const HEAD_TOP = 'clamp(20px, 2.4vw, 34px)';
-const HEAD_ROW = 'max(40px, clamp(30px, 3.1vw, 46px))';
+export const HEAD_TOP = 'clamp(20px, 2.4vw, 34px)';
+export const HEAD_ROW = 'max(40px, clamp(30px, 3.1vw, 46px))';
 const HEAD_BOTTOM = '16px';
 
 /** The room inside the glass, at its sides and its foot: for what's nested in its corners to reach past. */
@@ -106,6 +106,13 @@ export const usePaneLook = () => useContext(Look);
 const Held = createContext<number | null>(null);
 export const usePaneHeld = () => useContext(Held);
 
+/**
+ * The way Back and the way home, for a piece that draws its own head (`ownHead`): the same as the pane's head
+ * offers.
+ */
+const Actions = createContext<{ back: () => void; close: () => void }>({ back: () => {}, close: () => {} });
+export const usePaneActions = () => useContext(Actions);
+
 /** The glass's corner radius, for what's nested in its corners to sit concentric: its radius less the room between. */
 const Radius = createContext(44);
 export const usePaneRadius = () => useContext(Radius);
@@ -139,12 +146,22 @@ export interface PaneCard {
   /** Whether the head offers the way Back — from a piece, or a list opened out — rather than the list's name. */
   back?: boolean;
   /**
+   * A piece that, split in two (`split:`), draws its own Back and Home in its left column and fills the glass edge
+   * to edge: the pane's head steps aside, and its room under the head goes. Narrower, the head is as for any card.
+   */
+  ownHead?: boolean;
+  /**
    * A list whose name scrolls away with it, rather than staying at the head:
    * Work, whose name would otherwise stack over its second section's.
    */
   titleScrolls?: boolean;
   /** A plain fade from one to the next, for photos, rather than the notecard's turn. */
   fade?: boolean;
+  /**
+   * A piece slides across rather than turning, as a page turned or a tile slid: in from the right (1), or from the
+   * left (-1), going back to the one before. The one it takes the place of slides out the other way as it comes.
+   */
+  slide?: 1 | -1;
   /** A list's parts, each marked on its glass with `data-pane-part`: a rail by the scrollbar shows them, and which is in view. */
   parts?: { id: string; label: string }[];
   /** Whether a list can be opened out to fill the screen: only those with plenty to look at. */
@@ -255,24 +272,43 @@ const Haze: React.FC<{ tinted: boolean; edge: boolean }> = ({ tinted, edge }) =>
  * and draws in on itself, never out past where it started, so a section that
  * fills the pane exactly never brings up its scrollbar; and once flat it has
  * no transform at all, so anything inside that covers the glass is placed
- * against the glass.
+ * against the glass. A piece slides across instead (`slide`), the one going
+ * passing under the one coming.
  */
 const turned = (tip: number, scale: number) => `perspective(1400px) rotateX(${tip}deg) scale(${scale})`;
 const FLAT = turned(0, 1);
 const EXPO_OUT = [0.16, 1, 0.3, 1];
 
-const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; width?: number; rest: boolean; children: React.ReactNode }> = ({
+/**
+ * A piece's slide: its card only fades, quickly, coming and going (how long the one going takes; how soon after it
+ * starts the next comes), and the piece moves its own parts across, its title leading (`usePieceMotion`).
+ */
+const SLIDE = { come: 0.15, leave: 0.26, gap: 0.1 };
+
+/**
+ * For a piece whose card slides: the way its parts come in from — the right (1) or the left (-1), or 0 for no slide
+ * (reduced motion, or not a piece) — and the wait before they start; and, as it goes, the way the next piece is
+ * coming from, so its parts go out the other way (0 if what's next isn't a piece: then they just go with the card).
+ */
+const Way = createContext<{ way: 0 | 1 | -1; wait: number }>({ way: 0, wait: 0 });
+const NextWay = createContext<0 | 1 | -1>(0);
+export const usePieceMotion = () => ({ ...useContext(Way), next: useContext(NextWay) });
+
+const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; slide?: 1 | -1; width?: number; rest: boolean; children: React.ReactNode }> = ({
   delay,
   turns,
   fade,
+  slide,
   width,
   rest,
   children,
 }) => {
   const current = useIsPresent();
-  // A photo for a photo: a quick fade across, overlapping a touch, and no turn.
-  const tips = turns && !fade;
+  // A photo for a photo: a quick fade across, overlapping a touch, and no turn. A piece slides across instead.
+  const slides = turns && !fade && !!slide;
+  const tips = turns && !fade && !slide;
   const wait = fade ? Math.min(delay, 0.08) : delay;
+  const way = useMemo(() => ({ way: slides ? slide! : (0 as const), wait }), [slides, slide, wait]);
   const card = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
 
@@ -315,21 +351,44 @@ const Notecard: React.FC<{ delay: number; turns: boolean; fade?: boolean; width?
       className="col-start-1 row-start-1 origin-top"
       // Made at the width it will have while the glass is still on its way there: what reaches past is no scroll's.
       style={width ? { contain: 'layout' } : undefined}
-      initial={{ opacity: 0, ...(tips && { transform: turned(-10, 0.965) }) }}
-      animate={{
-        opacity: 1,
-        ...(tips && { transform: FLAT, transitionEnd: { transform: 'none' } }),
-        transition: { opacity: { duration: fade ? 0.24 : 0.32, delay: wait, ease: 'easeOut' }, transform: { duration: 0.55, delay: wait, ease: EXPO_OUT } },
+      // A piece's card only fades; its parts slide (`usePieceMotion`), and its labels — hidden, shown, gone — are
+      // theirs too. Going, it's the next one's way that says whether they slide out (handed down by the presence,
+      // `custom`); going anywhere else, the card just fades, as the glass moves.
+      custom={slide}
+      variants={{
+        hidden: {
+          opacity: 0,
+          ...(tips && { transform: turned(-10, 0.965) }),
+        },
+        shown: {
+          opacity: 1,
+          ...(tips && { transform: FLAT, transitionEnd: { transform: 'none' } }),
+          transition: {
+            opacity: { duration: fade ? 0.24 : slides ? SLIDE.come : 0.32, delay: wait, ease: 'easeOut' },
+            transform: { duration: 0.55, delay: wait, ease: EXPO_OUT },
+          },
+        },
+        gone: (way?: 1 | -1) => {
+          const across = slides && !!way;
+          return {
+            opacity: 0,
+            // From flat, not from no transform: framer would make "none" a transform of zeroes, and scale the card from nothing.
+            ...(tips && { transform: [FLAT, turned(-10, 0.97)] }),
+            transition: {
+              opacity: { duration: fade ? 0.16 : across ? SLIDE.leave : LEAVE * 0.9, ease: across ? [0.7, 0, 1, 1] : 'easeIn' },
+              transform: { duration: LEAVE, ease: 'easeIn' },
+            },
+          };
+        },
       }}
-      exit={{
-        opacity: 0,
-        // From flat, not from no transform: framer would make "none" a transform of zeroes, and scale the card from nothing.
-        ...(tips && { transform: [FLAT, turned(-10, 0.97)] }),
-        transition: { opacity: { duration: fade ? 0.16 : LEAVE * 0.9, ease: 'easeIn' }, transform: { duration: LEAVE, ease: 'easeIn' } },
-      }}
+      initial="hidden"
+      animate="shown"
+      exit="gone"
     >
       <div ref={inner} style={width ? { width } : undefined}>
-        <Settled.Provider value={rest && landed}>{children}</Settled.Provider>
+        <Way.Provider value={way}>
+          <Settled.Provider value={rest && landed}>{children}</Settled.Provider>
+        </Way.Provider>
       </div>
     </motion.div>
   );
@@ -500,7 +559,8 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
     now.layout = want.layout;
     now.key = want.card.key;
     now.width = early ? widthIn(want.box, want.card.parts ? want.railGutter : 0) : undefined;
-    now.delay = early ? MOVE_MS / 1000 - 0.14 : leaving.current ? LEAVE : 0;
+    // Of a size, the next comes as the last has gone; a piece after a piece, as soon as it's started to, to pass it.
+    now.delay = early ? MOVE_MS / 1000 - 0.14 : leaving.current ? (want.card.slide ? SLIDE.gap : LEAVE) : 0;
     redraw();
   }, []);
 
@@ -590,6 +650,10 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
   // usual padding, so a rail's room is already part of the way.
   const titleClear = Math.max(0, (expands ? 88 : 40) + 16 - gutter);
 
+  const actions = useMemo(() => ({ back: onBack, close: onClose }), [onBack, onClose]);
+  // How tall the glass is, or will be once it lands: for a piece's column that's as tall as the glass.
+  const paneHeight = window.innerHeight - now.box.top - now.box.bottom;
+
   // A new card on show: start it from the top, and take the reader's focus to what names it.
   useLayoutEffect(() => {
     if (!on) return;
@@ -639,7 +703,8 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
           data-pane-scroll=""
           // A list with a rail by its scrollbar has no scrollbar: the rail says where the reader is, and is a way about.
           data-rail={on?.parts ? '' : undefined}
-          className="pane-scroll absolute inset-0 overflow-y-auto"
+          // Never across: a piece sliding in from the right reaches past the glass for a moment.
+          className="pane-scroll absolute inset-0 overflow-y-auto overflow-x-hidden"
           style={{
             overscrollBehavior: 'contain',
             paddingTop: HEAD_TOP,
@@ -647,13 +712,16 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
             // A list with a rail: room kept for it, so nothing on the list reaches under it.
             paddingRight: gutter ? `calc(${PANE_PAD.sides} + ${gutter}px)` : PANE_PAD.sides,
             paddingBottom: PANE_PAD.bottom,
+            ['--pane-h' as string]: `${paneHeight}px`,
           }}
         >
           {/* One cell for both cards, the one going and the one coming, as they overlap. */}
           <div className="grid grid-cols-[minmax(0,1fr)]">
-            <AnimatePresence initial={false} onExitComplete={gone}>
+            <NextWay.Provider value={turns ? card.slide ?? 0 : 0}>
+            <AnimatePresence initial={false} custom={card.slide} onExitComplete={gone}>
               {on && (
-                <Notecard key={on.key} delay={now.delay} turns={turns} fade={on.fade} width={now.width} rest={settled && !moving.current}>
+                <Notecard key={on.key} delay={now.delay} turns={turns} fade={on.fade} slide={on.slide} width={now.width} rest={settled && !moving.current}>
+                  <Actions.Provider value={actions}>
                   <Held.Provider value={now.width !== undefined ? window.innerHeight - now.box.top - now.box.bottom : null}>
                     <Look.Provider value={on.look}>
                       <Radius.Provider value={radius}>
@@ -664,7 +732,7 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
                             </ListTitle>
                           )
                         ) : (
-                          <div aria-hidden="true" style={{ height: `calc(${HEAD_ROW} + ${HEAD_BOTTOM})` }} />
+                          <div aria-hidden="true" className={on.ownHead ? 'split:hidden' : undefined} style={{ height: `calc(${HEAD_ROW} + ${HEAD_BOTTOM})` }} />
                         )}
                         {/* With Back at the head, a list's name heads the list itself; its line about it is the list's first. */}
                         {on.back && on.title && <ListTitle>{on.title}</ListTitle>}
@@ -673,14 +741,20 @@ const SectionPane: React.FC<Props> = ({ card, box, layout, radius, railGutter = 
                       </Radius.Provider>
                     </Look.Provider>
                   </Held.Provider>
+                  </Actions.Provider>
                 </Notecard>
               )}
             </AnimatePresence>
+            </NextWay.Provider>
           </div>
         </div>
 
+        {/* A piece that draws its own head has it step aside, split in two: as soon as it's chosen, so it never shows
+            over the piece coming in, and back as soon as something else is. */}
         <header
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 [&_button]:pointer-events-auto"
+          className={`pointer-events-none absolute inset-x-0 top-0 z-10 transition-[opacity,visibility] duration-300 [&_button]:pointer-events-auto ${
+            card.ownHead ? 'split:invisible split:opacity-0' : ''
+          }`}
           style={{ paddingTop: HEAD_TOP, paddingBottom: HEAD_BOTTOM, paddingInline: PANE_PAD.sides }}
         >
           <Haze tinted={scrolled} edge={!!on?.titleScrolls && !on.back} />

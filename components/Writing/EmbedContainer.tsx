@@ -42,7 +42,7 @@ const EmbedContainer: React.FC<EmbedContainerProps> = ({
     // auto-convert watch URLs to embed URLs if needed, assuming the user passes correct embed urls for now
   } else if (type === 'spotify') {
     finalAspectRatio = finalAspectRatio || 'aspect-[4/3]'; // roughly fits standard small spotify player
-    className += ' rounded-[12px] overflow-hidden'; // Match spotify player border-radius
+    className += ' overflow-hidden';
   } else if (type === 'figma') {
     finalAspectRatio = finalAspectRatio || 'aspect-video';
   }
@@ -50,7 +50,7 @@ const EmbedContainer: React.FC<EmbedContainerProps> = ({
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full overflow-hidden bg-charcoal/[0.03] rounded-squircle 
+      className={`relative w-full overflow-hidden bg-charcoal/[0.03] 
         ${finalAspectRatio || 'aspect-video'} 
         ${className}
       `}
@@ -61,7 +61,7 @@ const EmbedContainer: React.FC<EmbedContainerProps> = ({
         <div className="absolute inset-0 z-10 cursor-pointer group">
           <img src={previewImage} alt={`Preview of ${title}`} decoding="async" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-charcoal/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-background/80 backdrop-blur-md px-6 py-3 rounded-full text-charcoal font-sans text-sm font-bold uppercase tracking-widest shadow-lg">
+            <div className="bg-background/80 backdrop-blur-md px-6 py-3 text-charcoal text-sm font-semibold uppercase tracking-widest shadow-lg">
               Load Interactive Embed
             </div>
           </div>

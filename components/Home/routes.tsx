@@ -27,9 +27,13 @@ const page = (load: () => Promise<{ default: ComponentType }>) => {
 /** The museum's code, loaded apart from the page: when it's opened, or ahead of that once the page is idle. Its images wait until it's opened. */
 export const loadMuseum = () => import('../../pages/MoodBoardMuseumPage');
 
-/** Start every piece's code loading, and the museum's, for the page to call when it's idle. A failure here is put right on opening one. */
+/**
+ * Start every piece's code loading, and the museum's, for the page to call when it's idle, and the pieces' face with
+ * them (Switzer, upright and italic), so the first opened has it in hand. A failure here is put right on opening one.
+ */
 export const prefetchPieces = () => {
   for (const load of [...loaders, loadMuseum]) load().catch(() => {});
+  for (const face of ['1em Switzer', 'italic 1em Switzer']) document.fonts?.load(face).catch(() => {});
 };
 
 /** Every project and post, by its address, and the section whose list it's in. */

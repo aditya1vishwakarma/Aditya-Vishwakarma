@@ -6,14 +6,14 @@ const { Section, Lead, P, H2, H3, Bold, List, ListItem, Img, MediaGallery, Divid
 const Placemarks = () => {
   return (
     <WritingLayout
-      title="Placemarks"
+      title="Place&shy;marks"
       category="iOS Development"
       date="June 2026"
       readTime="5 min read"
     >
       <Section>
         <Lead>
-          Placemarks (formerly Architextures) is an app for organizing the buildings and spaces that inspire you. [Coming to TestFlight Mid-November)]
+          Placemarks (formerly Architextures) is an app for organizing the buildings and spaces that inspire you. (Coming to TestFlight Mid-November)
         </Lead>
       </Section>
 
@@ -38,7 +38,7 @@ const Placemarks = () => {
               type: 'image',
               src: 'https://images.adityavishwakarma.com/projectvideos/Placemarks/Collection_Detail.avif',
               alt: 'Collections - Easy way to group a trip\'s photos together.',
-              caption: "Current Home Page Layout.",
+              caption: "Collections - Easy way to group a trip\'s photos together.",
             },
             {
               type: 'video',
