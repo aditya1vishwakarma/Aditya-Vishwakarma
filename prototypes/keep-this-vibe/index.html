@@ -2317,38 +2317,46 @@
       line-height: 1.3;
     }
 
-    .p-lede {
-      font-size: 15px;
-      font-weight: 300;
-      color: var(--ink-85);
-      margin-top: 8px;
-      max-width: 34ch;
-    }
-
     .p-sec {
-      margin-top: 18px;
-      padding-top: 18px;
+      margin-top: 15px;
+      padding-top: 15px;
       border-top: 1px solid var(--rule);
     }
 
-    .p-modes {
-      display: grid;
+    /* First in the panel, so no rule over it: the story while it runs itself, the lock in the reader's turn */
+    #pDemo,
+    html:not(.demo) #pWhy {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
     }
 
-    .p-modes>section {
-      grid-area: 1 / 1;
+    /* The reader's turn, in a sentence, over the lock */
+    .p-turn {
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--ink-85);
+      margin-bottom: 18px;
     }
 
-    .p-modes>section[hidden] {
-      display: block;
-      visibility: hidden;
+    .p-turn b {
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* Only where there's room for it beside the phone: the reader's turn at its tallest (locked, with a "Held back"
+       line) and this sentence need about 650px, and the stage's padding 68px more. Shorter, the column still fits. */
+    @media (max-height: 727px) {
+      .embed .p-turn {
+        display: none;
+      }
     }
 
     /* The story, while it runs itself */
     .p-segs {
       display: flex;
       gap: 4px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .p-segs i {
@@ -2379,7 +2387,7 @@
       font-weight: 500;
       letter-spacing: -.02em;
       line-height: 1.15;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .p-sb {
@@ -2387,13 +2395,14 @@
       font-weight: 300;
       color: var(--ink-85);
       margin-top: 6px;
-      min-height: calc(3 * 1.45em);
+      /* Room for the longest step's words, so the button under them holds still: two lines at the panel's width */
+      min-height: calc(2 * 1.45em);
     }
 
     .p-primary {
-      margin-top: 18px;
+      margin-top: 14px;
       width: 100%;
-      height: 46px;
+      height: 42px;
       padding: 0 16px;
       background: var(--solid);
       color: var(--on-solid);
@@ -2417,46 +2426,7 @@
       opacity: .85;
     }
 
-    .p-hint {
-      font-size: 14px;
-      color: var(--ink-75);
-      margin-top: 8px;
-    }
-
-    /* The reader's turn */
-    .p-steps {
-      list-style: none;
-      counter-reset: s;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .p-steps li {
-      counter-increment: s;
-      display: grid;
-      grid-template-columns: 26px 1fr;
-      font-size: 14.5px;
-      font-weight: 300;
-      color: var(--ink-85);
-    }
-
-    .p-steps li::before {
-      content: counter(s, decimal-leading-zero);
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .04em;
-      color: var(--ink-75);
-      font-variant-numeric: tabular-nums;
-      padding-top: 3px;
-    }
-
-    .p-steps b {
-      font-weight: 500;
-      color: var(--ink);
-    }
-
+    /* The reader's turn: skipping ahead */
     .p-btns {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -2479,33 +2449,6 @@
     .p-btn:hover {
       background: var(--lift);
       box-shadow: inset 0 0 0 1px var(--lift-edge), 0 4px 14px rgba(0, 0, 0, .06);
-    }
-
-    .p-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 14px;
-    }
-
-    .seg {
-      display: flex;
-      box-shadow: inset 0 0 0 1px var(--rule);
-    }
-
-    .seg button {
-      height: 32px;
-      min-width: 46px;
-      padding: 0 12px;
-      font-size: 12.5px;
-      font-weight: 500;
-      color: var(--ink-75);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .seg button.on {
-      background: var(--solid);
-      color: var(--on-solid);
     }
 
     .p-links {
@@ -2562,14 +2505,6 @@
       color: var(--ink-75);
     }
 
-    .p-details .is-on {
-      color: var(--moss);
-    }
-
-    .p-details .is-ease {
-      color: var(--ochre);
-    }
-
     .dots {
       display: inline-flex;
       gap: 3px;
@@ -2594,7 +2529,7 @@
     .p-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 14px;
+      margin-top: 12px;
       font-variant-numeric: tabular-nums;
     }
 
@@ -2646,11 +2581,8 @@
 
     .p-table .pass,
     .p-table .filt {
-      font-size: 11px;
+      font-size: 12.5px;
       font-weight: 500;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      padding-top: 9px;
     }
 
     .p-table .pass {
@@ -2661,14 +2593,201 @@
       color: var(--brick);
     }
 
-    .p-foot {
-      font-size: 12px;
-      color: var(--ink-75);
+    /* What a lock holds onto: the song, the songs like it, and the vibe they share, said in words */
+    .p-lock {
+      position: relative;
       margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--rule);
+      transition: border-color .3s ease;
     }
 
-    .p-foot code {
+    .p-lock.is-on {
+      border-color: var(--moss);
+    }
+
+    /* The moment it locks, a wash of moss passes over it once */
+    .p-lock::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--moss);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .p-lock.pulse::before {
+        animation: lockPulse 1.2s ease-out;
+      }
+    }
+
+    @keyframes lockPulse {
+      20% {
+        opacity: .16;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .p-lock-k {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-75);
+      line-height: 1.3;
+    }
+
+    .p-lock.is-on .p-lock-k {
+      color: var(--moss);
+    }
+
+    .p-lock-song {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .p-lock-art .cv {
+      display: block;
+      width: 40px;
+      height: 40px;
+    }
+
+    .p-lock-name {
+      min-width: 0;
+    }
+
+    .p-lock-name b,
+    .p-lock-name span {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-lock-name b {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .p-lock-name span {
+      font-size: 12.5px;
+      color: var(--ink-75);
+    }
+
+    .p-lock-like {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--ink-75);
+    }
+
+    .p-lock-covers {
+      display: flex;
+      gap: 2px;
+    }
+
+    /* A new direction has no songs like it yet: no gap held for them */
+    .p-lock-covers:empty {
+      display: none;
+    }
+
+    .p-lock-covers .cv {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
+
+    .p-lock-vibe {
+      margin-top: 10px;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .p-lock-vibe small {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--ink-75);
+    }
+
+    .p-lock-note,
+    .p-held {
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--ink-85);
+    }
+
+    /* What the lock keeps out, at the card's foot: the effect beside the reason */
+    .p-held {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--rule);
+    }
+
+    .p-held b {
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* How close a song is, drawn: the lock's range is the moss band, its edge the solid line, the song the square */
+    .p-table .mt {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meter {
+      position: relative;
+      width: 48px;
+      height: 10px;
+      flex: none;
+    }
+
+    .meter::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 4.5px;
+      height: 1px;
+      background: var(--rule);
+    }
+
+    .meter i {
+      position: absolute;
+      left: 0;
+      top: 1px;
+      height: 8px;
+      background: color-mix(in srgb, var(--moss) 28%, transparent);
+      border-right: 1.5px solid var(--moss);
+    }
+
+    .meter b {
+      position: absolute;
+      top: 2px;
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      background: var(--ink);
+    }
+
+    .meter b.out {
+      background: var(--brick);
+    }
+
+    .p-table .mw {
+      display: block;
+      margin-top: 2px;
       font-size: 11.5px;
+      color: var(--ink-75);
     }
 
     /* ══════════ RESPONSIVE ══════════ */
@@ -2744,6 +2863,14 @@
       overflow-y: auto;
     }
 
+    /* Beside the phone, exactly its height and centred with it, so the two start and end level however big the phone
+       is drawn (it stops growing at full size, on a big screen or zoomed out). Its words run from the top. */
+    .embed.row .panel {
+      align-self: center;
+      height: var(--phone-h);
+      max-height: none;
+    }
+
     /* More of it below, out of the box: its foot fades, so it's plain it scrolls */
     .embed .panel.more {
       -webkit-mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
@@ -2753,17 +2880,6 @@
     .embed:not(.row) .panel {
       width: 100%;
       max-width: 460px;
-    }
-
-    /* Stacked under the phone: the story comes straight after it; the page around it introduces it */
-    .embed:not(.row) .p-intro {
-      display: none;
-    }
-
-    .embed:not(.row) .p-modes>section {
-      margin-top: 0;
-      padding-top: 0;
-      border-top: 0;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -3151,12 +3267,7 @@
 
     <!-- ═══════════════ PANEL (beside the phone) ═══════════════ -->
     <aside class="panel" aria-label="About this prototype">
-      <div class="p-intro">
-      <p class="p-lede">Keep This Vibe, a concept for Spotify’s DJ. The queue comes from the model described in the post below.</p>
-      </div>
-
-      <div class="p-modes">
-      <!-- While it runs itself -->
+      <!-- While it runs itself: the story, on top -->
       <section class="p-sec" id="pDemo">
         <div class="p-segs" id="pSegs" aria-hidden="true"></div>
         <div class="p-swap" id="pStory" aria-live="polite">
@@ -3165,47 +3276,28 @@
           <p class="p-sb" id="pBody"></p>
         </div>
         <button class="p-primary" id="tryBtn">Try it yourself <span class="arr" aria-hidden="true">→</span></button>
-        <p class="p-hint">Tap the phone to try it yourself.</p>
       </section>
 
-      <!-- The reader's turn -->
-      <section class="p-sec" id="pLive" hidden>
-        <div class="p-count">Your turn</div>
-        <ol class="p-steps">
-          <li><span><b>Swipe left</b> on DJ, then tap the lock.</span></li>
-          <li><span><b>Keep dragging</b> for a longer lock.</span></li>
-          <li><span><b>Tap DJ</b> for requests and the lock chip.</span></li>
-        </ol>
-        <div class="p-label" style="margin-top:18px">Skip ahead</div>
-        <div class="p-btns">
-          <button class="p-btn" data-act="skips" title="Skip five in a row to see “Still vibing?”">Skip ×5</button>
-          <button class="p-btn" data-act="ease" title="Jump to the lock’s last three songs">Last 3 songs</button>
-          <button class="p-btn" data-act="expire" title="End the lock now">End lock</button>
-        </div>
-        <div class="p-row">
-          <span class="p-label">Time</span>
-          <div class="seg" id="speedSeg" role="radiogroup" aria-label="Time speed">
-            <button data-speed="1" class="on">1×</button>
-            <button data-speed="10">10×</button>
-            <button data-speed="60">60×</button>
+      <!-- The reader's turn, in a sentence (the phone itself teaches the swipe) -->
+      <p class="p-turn" id="pTurn" hidden><b>Your turn.</b> Lock any song, even one of DJ’s switch-ups, and see what the lock holds onto.</p>
+
+      <!-- What the lock holds onto, and how strictly -->
+      <section class="p-sec" id="pWhy">
+        <div class="p-label">How the lock decides</div>
+        <div class="p-lock" id="pmOn">
+          <div class="p-lock-k" id="pmOnK">If you lock now</div>
+          <div class="p-lock-song">
+            <span class="p-lock-art" id="pmOnArt"></span>
+            <div class="p-lock-name"><b id="pmOnName"></b><span id="pmOnArtist"></span></div>
           </div>
+          <div class="p-lock-like"><span class="p-lock-covers" id="pmOnCovers"></span><span id="pmOnLike"></span></div>
+          <p class="p-lock-vibe" id="pmOnVibe"></p>
+          <p class="p-lock-note" id="pmOnNote" hidden></p>
+          <p class="p-held" id="pmHeld" hidden></p>
         </div>
-        <div class="p-links">
-          <button class="p-link" data-act="demo">Watch the demo</button>
-          <button class="p-link" data-act="reset">Start over</button>
-        </div>
-      </section>
-      </div>
-
-      <section class="p-sec">
-        <div class="p-label">What the model sees</div>
         <dl class="p-details">
           <div>
-            <dt>Lock</dt>
-            <dd id="pmLock">Off</dd>
-          </div>
-          <div>
-            <dt>Threshold</dt>
+            <dt>How strict</dt>
             <dd id="pmThr"></dd>
           </div>
           <div>
@@ -3213,18 +3305,31 @@
             <dd><span class="dots" id="pmDots"></span><span id="pmSkip"></span></dd>
           </div>
         </dl>
-        <table class="p-table">
-          <thead>
-            <tr>
-              <th>Up next</th>
-              <th>Distance</th>
-              <th>On vibe</th>
-            </tr>
-          </thead>
-          <tbody id="pmQueue"></tbody>
-        </table>
-        <p class="p-foot" id="pmFoot"></p>
       </section>
+
+      <!-- The reader's turn: skip ahead to the parts that take a while -->
+      <section class="p-sec" id="pLive" hidden>
+        <div class="p-label">Skip ahead</div>
+        <div class="p-btns">
+          <button class="p-btn" data-act="skips" title="Skip five in a row to see “Still vibing?”">Skip ×5</button>
+          <button class="p-btn" data-act="ease" title="Jump to the lock’s last three songs">Last 3 songs</button>
+          <button class="p-btn" data-act="expire" title="End the lock now">End lock</button>
+        </div>
+        <div class="p-links">
+          <button class="p-link" data-act="demo">Watch the demo</button>
+          <button class="p-link" data-act="reset">Start over</button>
+        </div>
+      </section>
+
+      <table class="p-table">
+        <thead>
+          <tr>
+            <th>Up next</th>
+            <th>Match</th>
+          </tr>
+        </thead>
+        <tbody id="pmQueue"></tbody>
+      </table>
     </aside>
   </main>
 
@@ -3250,7 +3355,13 @@
       const L = D.locked_queue;      // VibeLock.query_locked() results
       const W = D.widen;             // tracks just past the threshold (gradual expiry)
       const SW = D.switch_up;        // what unlocked DJ X hops to
-      const ALL = new Map([ANCHOR, ...D.history, ...L, ...W, ...SW].map(t => [t.id, t]));
+      // The locks it can make: the session's (When The Sun Goes Down and the songs before it), and one for each
+      // switch-up song, for a listener who locks while it plays: a new direction (VibeLock follows a song that's
+      // outside the session's vibe). Each knows every song's distance from its own anchor.
+      const SESSION_LOCK = Object.assign({}, D.lock, { on: ANCHOR.id, queue: L, widen: W });
+      const PIVOTS = D.locks || {};
+      const LOCKS = [SESSION_LOCK, ...Object.values(PIVOTS)];
+      const ALL = new Map([ANCHOR, ...D.history, ...L, ...W, ...SW, ...Object.values(PIVOTS).flatMap(p => [...p.queue, ...p.widen])].map(t => [t.id, t]));
 
       // Unlocked DJ X: one more on-vibe track, then "let's switch it up"
       const DJ_PLAN = [L[0], ...SW, ...L.slice(5), ...W];
@@ -3299,12 +3410,112 @@
       const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const isLocked = () => S.lock.phase === 'locked' || S.lock.phase === 'easing';
       const remainingMs = () => Math.max(0, S.lock.endsAt - S.sim);
-      const effThreshold = () => D.lock.threshold * Math.pow(WIDEN, S.lock.step);
+      // A lock's edge: its threshold, loosened a step a song while it eases out
+      const edgeOf = def => def.threshold * Math.pow(WIDEN, S.lock.step);
       const remainLabel = ms => {
         const m = Math.ceil(ms / 60000);
         if (ms < 60000) return fmt(ms / 1000);
         return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
       };
+      const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+      const andList = a => a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`;
+
+      // ════════════════════════════════════════════════════════════
+      // PLAIN WORDS — the model's numbers, said the way a listener would
+      // ════════════════════════════════════════════════════════════
+      const distIn = (def, t) => def.dist?.[t.id] ?? (def === SESSION_LOCK ? t.distance : Infinity);
+      const fits = (def, t) => distIn(def, t) <= def.threshold;
+      const isNewDirection = b => b.def.anchor_mode === 'pivot' && b.lead.id === b.def.on;
+
+      // What a lock right now would hold onto, led by the song playing:
+      //  · a switch-up song has a lock of its own: a new direction, built from it alone
+      //  · otherwise the lock it fits best, with the songs like it just before
+      //  · a song that fits none is a one-off: the lock stays on the session, via the last song that fit it
+      function lockBasis() {
+        const seen = new Set(), before = [];
+        for (const id of [...S.played].reverse()) {
+          const t = ALL.get(id);
+          if (t && !seen.has(id) && id !== S.cur.id) { seen.add(id); before.push(t); }
+        }
+        const like = (def, lead) => before.filter(t => t.id !== lead.id && fits(def, t)).slice(0, 5);
+        const own = PIVOTS[S.cur.id];
+        if (own) return { def: own, lead: S.cur, backing: [], oneOff: null };
+        const best = LOCKS.filter(d => fits(d, S.cur)).sort((a, b) => distIn(a, S.cur) / a.threshold - distIn(b, S.cur) / b.threshold)[0];
+        if (best) return { def: best, lead: S.cur, backing: like(best, S.cur), oneOff: null };
+        const lead = before.find(t => fits(SESSION_LOCK, t)) || ANCHOR;
+        return { def: SESSION_LOCK, lead, backing: like(SESSION_LOCK, lead), oneOff: S.cur };
+      }
+      // The lock's basis while it's on (or just ended); otherwise what locking now would take
+      const basisNow = () => (isLocked() || S.lock.phase === 'ended') && S.lock.basis ? S.lock.basis : lockBasis();
+      const basisTracks = b => [b.lead, ...b.backing];
+
+      const FEATURES = ['energy', 'valence', 'danceability', 'acousticness', 'tempo'];
+      const vibeOf = ts => Object.fromEntries(FEATURES.map(k => [k, ts.reduce((s, t) => s + t[k], 0) / ts.length]));
+
+      // A vibe in up to three words. Tempo only counts when the songs are lively: a ballad's BPM is often read
+      // double (drivers license is "144"), so it can't say fast or slow on its own.
+      function vibeWords(f) {
+        const w = [];
+        if (f.energy >= .8) w.push('loud'); else if (f.energy < .45) w.push('soft');
+        if (f.energy >= .6 && f.tempo >= 140) w.push('fast'); else if (f.tempo < 100) w.push('slow');
+        if (f.acousticness >= .5) w.push('acoustic'); else if (f.acousticness <= .05 && f.energy >= .6) w.push('electric');
+        if (f.valence >= .6) w.push('bright'); else if (f.valence <= .3) w.push(f.energy >= .6 ? 'dark' : f.danceability >= .65 ? 'moody' : 'sad');
+        if (f.danceability >= .65) w.push('danceable');
+        return w.slice(0, 3);
+      }
+
+      // How a song differs from the vibe: its two clearest differences. Each row: the feature, the gap that
+      // counts as clear, and the words for lower and higher.
+      const GAPS = [
+        ['energy', .2, 'softer', 'louder'],
+        ['valence', .2, 'sadder', 'brighter'],
+        ['acousticness', .3, 'less acoustic', 'more acoustic'],
+        ['danceability', .2, 'less danceable', 'more danceable'],
+        ['tempo', 30, 'slower', 'faster'],
+      ];
+      function diffWords(t, f) {
+        return GAPS.map(([k, step, lo, hi], order) => ({ by: (t[k] - f[k]) / step, lo, hi, order }))
+          .filter(g => Math.abs(g.by) >= 1)
+          .sort((a, b) => Math.abs(b.by) - Math.abs(a.by)).slice(0, 2)
+          .sort((a, b) => a.order - b.order)
+          .map(g => g.by < 0 ? g.lo : g.hi);
+      }
+
+      // The genres most of the songs share, skipping one that's part of another already named ("rock" beside
+      // "modern rock") and Spotify's own labels that don't read as a genre to a listener
+      const OPAQUE = new Set(['permanent wave', 'alt z', 'post-teen pop', 'escape room', 'bow pop', 'gymcore', 'otacore',
+        'pixie', 'electropowerpop', 'neo mellow', 'candy pop', 'social media pop']);
+      function genreNames(ts, n = 2) {
+        const count = new Map();
+        ts.forEach(t => (t.genres || []).forEach(g => count.set(g, (count.get(g) || 0) + 1)));
+        const out = [];
+        for (const [g] of [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+          if (OPAQUE.has(g) || out.some(o => o.includes(g) || g.includes(o))) continue;
+          out.push(g);
+          if (out.length === n) break;
+        }
+        return out;
+      }
+
+      // "loud, fast modern rock": how DJ names a vibe out loud
+      function vibePhrase(b) {
+        const ts = basisTracks(b);
+        return [vibeWords(vibeOf(ts)).slice(0, 2).join(', '), genreNames(ts, 1)[0]].filter(Boolean).join(' ');
+      }
+
+      // Distance, as a verdict: how close a song is to the vibe, measured against the lock's own edge. While it
+      // eases out, a song past that edge but inside the loosened one is let in loosely.
+      function matchWord(d, def) {
+        const r = d / def.threshold;
+        return r <= .3 ? 'Very close' : r <= .6 ? 'Close' : r <= 1 ? 'Just fits' : d <= edgeOf(def) ? 'Loosely fits' : 'Doesn’t fit';
+      }
+      // Confidence, as how strict the lock is, and why. A new direction has one song to go on, so it's loose.
+      function strictWord(def) {
+        if (def.anchor_mode === 'pivot') return ['Loose', 'one song to go on'];
+        const c = def.confidence, n = `${def.n_listens} songs`;
+        return c >= .66 ? ['Tight', `${n} very alike`] : c >= .33 ? ['Medium', `${n} fairly alike`] : ['Loose', `${n} quite mixed`];
+      }
+      const METER_MAX = 1.6;   // the meter's far end, in distance: past DJ's furthest switch-up
 
       const ICON = {
         play: '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.4v13.2a.9.9 0 0 0 1.37.77l10.5-6.6a.9.9 0 0 0 0-1.54L9.37 4.63A.9.9 0 0 0 8 5.4z"/></svg>',
@@ -3363,15 +3574,23 @@
         const fresh = arr => arr.filter(t => t && !recent.has(t.id));
         // Gradual hand-off: once easing starts (or the timer ends), finish the
         // widening songs before DJ X's normal mix — never a hard cut on expiry.
-        if (S.lock.handoff && !fresh(W).length) S.lock.handoff = false;
+        // The lock's own picks and easing songs: the session's, or a new direction's.
+        const def = S.lock.def || SESSION_LOCK;
+        if (S.lock.handoff && !fresh(def.widen).length) S.lock.handoff = false;
         let q;
-        if (S.lock.phase === 'locked') q = fresh(L);
-        else if (S.lock.handoff) q = fresh([...W, ...DJ_PLAN]);
+        if (S.lock.phase === 'locked') q = fresh(def.queue);
+        else if (S.lock.handoff) q = fresh([...def.widen, ...DJ_PLAN]);
         else q = fresh(DJ_PLAN);
-        if (q.length < 6) q = q.concat(fresh(L));
-        if (q.length < 6) q = q.concat([...L, ...D.history].filter(t => t.id !== S.cur.id));
-        const seen = new Set();
-        S.upNext = q.filter(t => !seen.has(t.id) && seen.add(t.id)).slice(0, 8);
+        const once = a => { const seen = new Set(); return a.filter(t => !seen.has(t.id) && seen.add(t.id)); };
+        // Running short (a long lock plays through its picks): its songs again, the longest ago played first.
+        // Counted once over, so the same picks can't fill it twice.
+        q = once(q);
+        if (q.length < 6) {
+          const pool = isLocked() ? def.queue : [...L, ...D.history];
+          const ago = t => S.played.lastIndexOf(t.id);
+          q = once(q.concat(fresh(pool), pool.filter(t => t.id !== S.cur.id).sort((a, b) => ago(a) - ago(b))));
+        }
+        S.upNext = q.slice(0, 8);
         renderQueue();
       }
 
@@ -3407,16 +3626,27 @@
       // ════════════════════════════════════════════════════════════
       function lockVibe(min, opts = {}) {
         const wasLocked = isLocked();
-        Object.assign(S.lock, { phase: 'locked', dur: min, lastDur: min, startedAt: S.sim, endsAt: S.sim + min * 60000, step: 0, skips: [], handoff: false });
+        // What it holds onto: kept when the lock is only resized or picked up again, otherwise what's playing now
+        const basis = (wasLocked || opts.relock) && S.lock.basis ? S.lock.basis : lockBasis();
+        Object.assign(S.lock, { phase: 'locked', dur: min, lastDur: min, startedAt: S.sim, endsAt: S.sim + min * 60000, step: 0, skips: [], handoff: false, basis, def: basis.def, phrase: vibePhrase(basis) });
         hideDjCard();
         dismissCoach();
         rebuildQueue();
         renderLock();
+        if (!wasLocked) pulseLock();
         haptic([14]);
         if (opts.quiet) return;
         if (wasLocked) toast(`Vibe lock set to ${durLabel(min)}`, 'lock');
         else if (opts.relock) djSay({ title: 'Back on lock.', sub: 'Picking up right where we left off.', ms: 4200 });
-        else djSay({ title: 'Locked in.', sub: `I'll keep this exact vibe going for the next ${durLong(min)}.`, ms: 4600 });
+        else djSay({ title: 'Locked in.', sub: `I'll keep this ${S.lock.phrase} going for the next ${durLong(min)}.`, ms: 4600 });
+      }
+
+      // The panel's "Locked on" card catches the eye the moment the lock takes hold
+      function pulseLock() {
+        const el = $('pmOn');
+        el.classList.remove('pulse');
+        void el.offsetWidth;
+        el.classList.add('pulse');
       }
 
       function unlockVibe(reason = 'manual') {
@@ -3677,7 +3907,7 @@
           $('ringVal').style.strokeDashoffset = RING_C * (1 - frac);
           $('lockPillTxt').textContent = `${p === 'easing' ? 'Lock ending' : 'Vibe locked'} · ${remainLabel(rem)}`;
           $('miniLockTxt').textContent = remainLabel(rem);
-          $('lcSub').textContent = `${fmt(rem / 1000)} left · tuned to your last ${D.lock.n_listens} songs`;
+          $('lcSub').textContent = `${fmt(rem / 1000)} left · ${S.lock.phrase || 'this vibe'}`;
           $('lcBar').style.width = `${frac * 100}%`;
         } else if (p === 'ended') {
           $('lockPillTxt').textContent = 'Vibe lock ended';
@@ -3690,34 +3920,61 @@
       // PRESENTER PANEL
       // ════════════════════════════════════════════════════════════
       function renderPanel() {
-        $('pmFoot').textContent = `From the real vibe index. A concept, not affiliated with Spotify.`;
         renderPanelLive();
         renderPanelQueue();
       }
 
       function renderPanelLive() {
-        const p = S.lock.phase;
-        const el = $('pmLock');
-        el.className = isLocked() ? (p === 'easing' ? 'is-ease' : 'is-on') : '';
-        el.textContent = p === 'off' ? 'Off' : p === 'ended' ? 'Ended' :
-          p === 'easing' ? `Easing out · ${fmt(remainingMs() / 1000)}` : `On · ${fmt(remainingMs() / 1000)} left`;
+        // Whether it's on shows in the card above ("Locked on"), and the time left on the phone's pill.
+        // How strict, not the threshold: from how alike the songs it's built on are. Easing loosens it a step a song.
+        const [strict, why] = strictWord(basisNow().def);
         $('pmThr').innerHTML = S.lock.step
-          ? `${effThreshold().toFixed(2)} <small>widened ×1.3<sup>${S.lock.step}</sup></small>`
-          : `${D.lock.threshold.toFixed(2)} <small>at confidence ${D.lock.confidence.toFixed(2)}</small>`;
+          ? `Loosening <small>${S.lock.step} of 3</small>`
+          : `${strict} <small>${why}</small>`;
         const w = S.lock.skips;
         $('pmDots').innerHTML = Array.from({ length: SKIP_WINDOW }, (_, i) => `<i class="${w[i] === 'skip' ? 's' : w[i] === 'listen' ? 'l' : ''}"></i>`).join('');
-        $('pmSkip').textContent = w.length ? `${Math.round(skipRate() * 100)}%` : '–';
+        $('pmSkip').textContent = w.length ? `${w.filter(a => a === 'skip').length} of ${w.length}` : 'None yet';
+      }
+
+      // What the lock holds onto (or would, if you locked now): the song, the songs like it, and their vibe in words
+      function renderPanelLock() {
+        const p = S.lock.phase, b = basisNow(), ts = basisTracks(b);
+        $('pmOn').classList.toggle('is-on', isLocked());
+        $('pmOnK').textContent = p === 'easing' ? 'Easing out of' : isLocked() ? 'Locked on' : p === 'ended' ? 'Was locked on' : 'If you lock now';
+        $('pmOnArt').innerHTML = coverHTML(b.lead);
+        $('pmOnName').textContent = b.lead.name;
+        $('pmOnArtist').textContent = b.lead.artists;
+        $('pmOnCovers').innerHTML = b.backing.map(t => coverHTML(t)).join('');
+        // A new direction is built from the one song; otherwise the songs like it it's built from too
+        $('pmOnLike').textContent = isNewDirection(b) ? 'A new direction, built from this song alone'
+          : b.backing.length ? `+ the ${b.backing.length} song${b.backing.length > 1 ? 's' : ''} like it` : 'Built from this song alone';
+        $('pmOnVibe').innerHTML = `${esc(cap(vibeWords(vibeOf(ts)).join(' · ')))}<small>${esc(genreNames(ts).join(', '))}</small>`;
+        const one = b.oneOff;
+        $('pmOnNote').hidden = !one;
+        if (one) $('pmOnNote').textContent = `${one.name} is a one-off next to these, so it ${b === S.lock.basis ? 'didn’t' : 'won’t'} steer the lock.`;
       }
 
       function renderPanelQueue() {
-        const thr = effThreshold();
-        $('pmQueue').innerHTML = [S.cur, ...S.upNext.slice(0, 2)].map((t, i) => {
-          const pass = t.distance <= thr;
+        renderPanelLock();
+        const b = basisNow(), def = b.def, edge = edgeOf(def), f = vibeOf(basisTracks(b));
+        const at = d => `${Math.min(100, d / METER_MAX * 100).toFixed(1)}%`;
+        $('pmQueue').innerHTML = [S.cur, S.upNext[0]].filter(Boolean).map((t, i) => {
+          const d = distIn(def, t), ok = d <= edge;
+          const why = ok ? '' : diffWords(t, f).join(', ') || 'a different sound';
           return `<tr>
             <td><span class="tn">${esc(t.name)}</span><span class="ta">${i === 0 ? 'Now playing · ' : ''}${esc(t.artists)}</span></td>
-            <td>${t.distance.toFixed(2)}</td>
-            <td class="${pass ? 'pass' : 'filt'}">${pass ? 'Yes' : 'No'}</td></tr>`;
+            <td><span class="mt"><span class="meter" aria-hidden="true"><i style="width:${at(edge)}"></i><b class="${ok ? 'in' : 'out'}" style="left:${at(d)}"></b></span><span class="${ok ? 'pass' : 'filt'}">${matchWord(d, def)}</span></span><span class="mw">${why ? `${esc(why)} · ` : ''}${d.toFixed(2)}</span></td></tr>`;
         }).join('');
+        // What the lock keeps out: the songs DJ would otherwise play, while they're outside its edge
+        const held = $('pmHeld');
+        held.hidden = !isLocked();
+        if (!isLocked()) return;
+        const out = [...new Map(DJ_PLAN.map(t => [t.id, t])).values()].filter(t => t.id !== S.cur.id && distIn(def, t) > edge);
+        // On one line: up to three named, or one and a count
+        const named = out.length > 3 ? [out[0].name, `${out.length - 1} more`] : out.map(t => t.name);
+        held.innerHTML = out.length
+          ? `<b>Held back:</b> ${esc(andList(named))}`
+          : `<b>Loose enough now</b> to let DJ’s own picks back in`;
       }
 
       // ════════════════════════════════════════════════════════════
@@ -4089,16 +4346,10 @@
       // ════════════════════════════════════════════════════════════
       // PANEL CONTROLS (the reader's turn)
       // ════════════════════════════════════════════════════════════
+      // Time runs at 1×: the reader's turn has no speed control (the "Last 3 songs" and "End lock" buttons skip ahead)
       function setSpeed(n) {
         S.speed = n;
-        document.querySelectorAll('#speedSeg button').forEach(x => {
-          const on = +x.dataset.speed === n;
-          x.classList.toggle('on', on);
-          x.setAttribute('aria-checked', on);
-          x.setAttribute('role', 'radio');
-        });
       }
-      document.querySelectorAll('#speedSeg button').forEach(b => b.onclick = () => setSpeed(+b.dataset.speed));
 
       document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
         const act = b.dataset.act;
@@ -4156,13 +4407,13 @@
       const syncPaused = () => root.classList.toggle('is-paused', paused());
 
       const STORY = [
-        ['DJ finds your groove', 'Twenty minutes into a drive, DJ X is playing exactly what you want.'],
-        ['Then it switches it up', 'There’s no way to say “keep going”, so DJ hops from garage rock to a piano ballad.'],
+        ['DJ finds your groove', 'Twenty minutes into a drive, DJ X is playing exactly what you want: loud, fast rock.'],
+        ['Then it switches it up', 'There’s no way to say “keep going”, so DJ hops to a soft, sad piano ballad.'],
         ['Swipe left on DJ', 'A short swipe reveals the lock. One tap locks this vibe for 30 minutes.'],
         ['Drag to choose how long', 'Keep dragging for 1 hr, 1.5 hr or 2 hr. Let go to lock.'],
-        ['Up next stays on vibe', 'Only songs close to this vibe can play. The piano ballad is filtered out.'],
+        ['Up next stays on vibe', 'It’s locked on this song and the 5 like it. The piano ballad doesn’t fit, so it’s held back.'],
         ['Skipping makes DJ check in', 'Skip five in a row and DJ asks “Still vibing?” instead of forcing the lock.'],
-        ['It eases out, no hard cut', 'In the last three songs the lock loosens, then hands back to DJ, with one tap to re-lock.'],
+        ['It eases out, no hard cut', 'In the last three songs the lock loosens a little each song, then hands back to DJ.'],
       ];
       const STORY_END = ['Your turn', 'Take over to try the swipe yourself. The demo starts again in a moment.'];
       const STORY_END_WATCH = ['That’s Keep This Vibe', 'One swipe to lock, a check-in when you skip, and an ease-out with no hard cut. Starting again.'];
@@ -4457,6 +4708,7 @@
       function renderMode() {
         root.classList.toggle('demo', S.mode === 'demo');
         $('pDemo').hidden = S.mode !== 'demo';
+        $('pTurn').hidden = S.mode !== 'live';
         $('pLive').hidden = S.mode !== 'live';
       }
 
@@ -4554,6 +4806,8 @@
         device.style.top = `${RING * s}px`;
         device.style.transform = `scale(${s})`;
         root.style.setProperty('--screen-h', '852px');
+        // The phone as drawn: the panel beside it is exactly this tall, so the two always start and end level
+        root.style.setProperty('--phone-h', `${852 * s}px`);
       }
       function fit() {
         if (EMBED) {
