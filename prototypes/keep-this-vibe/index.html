@@ -2138,11 +2138,9 @@
     }
 
     .pop-k {
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
+      font-size: 11.5px;
       color: rgba(35, 33, 31, .75);
+      font-variant-numeric: tabular-nums;
     }
 
     .pop-t {
@@ -2306,20 +2304,24 @@
       outline-offset: 2px;
     }
 
-    .p-kicker,
-    .p-label,
-    .p-count {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-75);
+    /* Labels: sentence case in bold, beside values in regular weight (no small capitals) */
+    .p-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
       line-height: 1.3;
     }
 
+    .p-count {
+      font-size: 12px;
+      color: var(--ink-75);
+      line-height: 1.3;
+      font-variant-numeric: tabular-nums;
+    }
+
     .p-sec {
-      margin-top: 15px;
-      padding-top: 15px;
+      margin-top: 14px;
+      padding-top: 14px;
       border-top: 1px solid var(--rule);
     }
 
@@ -2482,20 +2484,16 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       align-items: baseline;
-      padding: 5px 0;
+      padding: 4px 0;
     }
 
     .p-details dt {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-75);
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .p-details dd {
       font-size: 14px;
-      font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
 
@@ -2534,11 +2532,8 @@
     }
 
     .p-table th {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-75);
+      font-size: 13px;
+      font-weight: 600;
       text-align: left;
       padding: 0 0 6px;
     }
@@ -2596,8 +2591,8 @@
     /* What a lock holds onto: the song, the songs like it, and the vibe they share, said in words */
     .p-lock {
       position: relative;
-      margin-top: 12px;
-      padding: 12px;
+      margin-top: 10px;
+      padding: 11px 12px;
       border: 1px solid var(--rule);
       transition: border-color .3s ease;
     }
@@ -2633,11 +2628,8 @@
     }
 
     .p-lock-k {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-75);
+      font-size: 13px;
+      font-weight: 600;
       line-height: 1.3;
     }
 
@@ -2733,7 +2725,7 @@
     }
 
     .p-held b {
-      font-weight: 500;
+      font-weight: 600;
       color: var(--ink);
     }
 
@@ -3438,12 +3430,19 @@
           if (t && !seen.has(id) && id !== S.cur.id) { seen.add(id); before.push(t); }
         }
         const like = (def, lead) => before.filter(t => t.id !== lead.id && fits(def, t)).slice(0, 5);
+        // The run it's built on: the lead and the songs straight before it that are this vibe too, up to 3. The lock
+        // reads the last 5, the newest counting most, so the last 3 carry most of it.
+        const run = (def, lead) => {
+          const out = [];
+          for (const t of before.slice(before.indexOf(lead) + 1)) { if (out.length === 2 || !fits(def, t)) break; out.push(t); }
+          return out;
+        };
         const own = PIVOTS[S.cur.id];
-        if (own) return { def: own, lead: S.cur, backing: [], oneOff: null };
+        if (own) return { def: own, lead: S.cur, backing: [], run: [], oneOff: null };
         const best = LOCKS.filter(d => fits(d, S.cur)).sort((a, b) => distIn(a, S.cur) / a.threshold - distIn(b, S.cur) / b.threshold)[0];
-        if (best) return { def: best, lead: S.cur, backing: like(best, S.cur), oneOff: null };
+        if (best) return { def: best, lead: S.cur, backing: like(best, S.cur), run: run(best, S.cur), oneOff: null };
         const lead = before.find(t => fits(SESSION_LOCK, t)) || ANCHOR;
-        return { def: SESSION_LOCK, lead, backing: like(SESSION_LOCK, lead), oneOff: S.cur };
+        return { def: SESSION_LOCK, lead, backing: like(SESSION_LOCK, lead), run: run(SESSION_LOCK, lead), oneOff: S.cur };
       }
       // The lock's basis while it's on (or just ended); otherwise what locking now would take
       const basisNow = () => (isLocked() || S.lock.phase === 'ended') && S.lock.basis ? S.lock.basis : lockBasis();
@@ -3485,14 +3484,17 @@
       // "modern rock") and Spotify's own labels that don't read as a genre to a listener
       const OPAQUE = new Set(['permanent wave', 'alt z', 'post-teen pop', 'escape room', 'bow pop', 'gymcore', 'otacore',
         'pixie', 'electropowerpop', 'neo mellow', 'candy pop', 'social media pop']);
+      // Labels so broad they say little ("modern rock" is worn by metalcore bands as much as garage rock ones): used
+      // only when a vibe has nothing more specific
+      const UMBRELLA = new Set(['rock', 'modern rock', 'alternative rock', 'pop']);
       function genreNames(ts, n = 2) {
         const count = new Map();
         ts.forEach(t => (t.genres || []).forEach(g => count.set(g, (count.get(g) || 0) + 1)));
+        const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([g]) => g).filter(g => !OPAQUE.has(g));
         const out = [];
-        for (const [g] of [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
-          if (OPAQUE.has(g) || out.some(o => o.includes(g) || g.includes(o))) continue;
-          out.push(g);
+        for (const g of [...ranked.filter(g => !UMBRELLA.has(g)), ...ranked.filter(g => UMBRELLA.has(g))]) {
           if (out.length === n) break;
+          if (!out.some(o => o.includes(g) || g.includes(o))) out.push(g);
         }
         return out;
       }
@@ -3944,10 +3946,11 @@
         $('pmOnArt').innerHTML = coverHTML(b.lead);
         $('pmOnName').textContent = b.lead.name;
         $('pmOnArtist').textContent = b.lead.artists;
-        $('pmOnCovers').innerHTML = b.backing.map(t => coverHTML(t)).join('');
-        // A new direction is built from the one song; otherwise the songs like it it's built from too
-        $('pmOnLike').textContent = isNewDirection(b) ? 'A new direction, built from this song alone'
-          : b.backing.length ? `+ the ${b.backing.length} song${b.backing.length > 1 ? 's' : ''} like it` : 'Built from this song alone';
+        // Why it holds onto this: the last few songs were all this vibe (shown, oldest first), or there's one song to go on
+        const n = b.run.length + 1;
+        $('pmOnCovers').innerHTML = [...b.run].reverse().map(t => coverHTML(t)).join('');
+        $('pmOnLike').textContent = isNewDirection(b) ? 'A new direction, so the lock anchors to this song’s vibe.'
+          : n > 1 ? `Last ${n} songs were this vibe, so the lock stays on it.` : 'Just this song so far, so the lock anchors to its vibe.';
         $('pmOnVibe').innerHTML = `${esc(cap(vibeWords(vibeOf(ts)).join(' · ')))}<small>${esc(genreNames(ts).join(', '))}</small>`;
         const one = b.oneOff;
         $('pmOnNote').hidden = !one;
@@ -4407,11 +4410,11 @@
       const syncPaused = () => root.classList.toggle('is-paused', paused());
 
       const STORY = [
-        ['DJ finds your groove', 'Twenty minutes into a drive, DJ X is playing exactly what you want: loud, fast rock.'],
+        ['DJ finds your groove', 'Twenty minutes into a drive, DJ X is playing exactly what you want: loud, fast garage rock.'],
         ['Then it switches it up', 'There’s no way to say “keep going”, so DJ hops to a soft, sad piano ballad.'],
         ['Swipe left on DJ', 'A short swipe reveals the lock. One tap locks this vibe for 30 minutes.'],
         ['Drag to choose how long', 'Keep dragging for 1 hr, 1.5 hr or 2 hr. Let go to lock.'],
-        ['Up next stays on vibe', 'It’s locked on this song and the 5 like it. The piano ballad doesn’t fit, so it’s held back.'],
+        ['Up next stays on vibe', 'Your last 3 songs were this vibe, so the lock stays on it. The ballad doesn’t fit: it’s held back.'],
         ['Skipping makes DJ check in', 'Skip five in a row and DJ asks “Still vibing?” instead of forcing the lock.'],
         ['It eases out, no hard cut', 'In the last three songs the lock loosens a little each song, then hands back to DJ.'],
       ];
